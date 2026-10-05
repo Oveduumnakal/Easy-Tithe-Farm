@@ -27,48 +27,37 @@ package com.oveduumnakal.tithefarm;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
-import java.awt.Rectangle;
 import java.awt.Shape;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.function.IntPredicate;
 import javax.inject.Inject;
 
-import net.runelite.api.Client;
 import net.runelite.api.GameObject;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.Point;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayUtil;
 
 /**
- * Highlights the single next thing to click, from {@link ActionAdvisor}: the plot to plant, water, or harvest;
- * the water barrel to refill at; or the seed table to restock from. For a plant or water action the matching
- * inventory item (a seed, or a filled watering can) is boxed too, so the player knows what to click with.
+ * Lights up what to click in the scene, colored by what to do there, so the player can follow the run without
+ * reading: the plot to click now and the four after it from {@link ActionForecast}, brightest first and fading
+ * to 10%; the water barrels when a refill is due; the sacks once 100 or more fruit is carried; and the seed table
+ * or sacks for the other errands. Every highlight pulses together at the configured glow speed. Minimal view
+ * drops the trail after the current plot. The matching backpack items are lit by {@link TitheInventoryOverlay},
+ * since this overlay draws under the interfaces.
  */
 class TitheHighlightOverlay extends Overlay
 {
-	private final Client client;
 	private final TitheFarmConfig config;
 	private final TithePlotTracker plotTracker;
-	private final WaterTracker waterTracker;
+	private final TitheRun run;
 
 	@Inject
-	TitheHighlightOverlay(Client client, TitheFarmConfig config, TithePlotTracker plotTracker,
-		WaterTracker waterTracker)
+	TitheHighlightOverlay(TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run)
 	{
-		this.client = client;
 		this.config = config;
 		this.plotTracker = plotTracker;
-		this.waterTracker = waterTracker;
+		this.run = run;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
@@ -76,136 +65,117 @@ class TitheHighlightOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!config.highlightNextAction() || !plotTracker.inTitheFarm())
+		if (!plotTracker.inTitheFarm())
 			return null;
 
-		List<GameObject> route = TitheRoutePlots.ordered(plotTracker.getPlots(), config.cropCount());
-		List<TithePlotState> states = new ArrayList<>();
-		for (GameObject plot : route)
-			states.add(plotTracker.stateOf(plot));
+		RunSnapshot snapshot = run.snapshot();
+		double glow = HighlightStyle.pulse(System.currentTimeMillis(), config.glowSpeed());
+		if (refillDue(config, snapshot))
+			highlightObjects(graphics, plotTracker.getWaterBarrels(), config.waterColor(), glow);
 
-		boolean hasSeeds = inventoryHas(TitheFarmIds::isSeed);
-		int water = waterTracker.availableCharges();
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(states, hasSeeds, water);
-		Color color = config.nextActionColor();
-		switch (advice.getAction())
+		boolean bonusDeposit = bonusDeposit(snapshot);
+		if (bonusDeposit)
+			highlightObjects(graphics, plotTracker.getSacks(), config.depositColor(), glow);
+
+		if (config.highlightNextAction())
 		{
-			case WATER_PLANT:
-				highlightPlot(graphics, route.get(advice.getPlotIndex()), "Water", color);
-				highlightInventory(graphics, TitheHighlightOverlay::isFilledCan, color);
-				break;
-			case PLANT_SEED:
-				highlightPlot(graphics, route.get(advice.getPlotIndex()), "Plant", color);
-				highlightInventory(graphics, TitheFarmIds::isSeed, color);
-				break;
-			case HARVEST:
-				highlightPlot(graphics, route.get(advice.getPlotIndex()), "Harvest", color);
-				break;
-			case REFILL_WATER:
-				highlightObjects(graphics, plotTracker.getWaterBarrels(), "Refill", config.warningColor());
-				break;
-			case GET_SEEDS:
-				highlightSeedTable(graphics, color);
-				break;
-			default:
-				break;
+			highlightTrail(graphics, snapshot, glow);
+			highlightErrand(graphics, snapshot.getAdvice().getAction(), bonusDeposit, glow);
 		}
 
 		return null;
 	}
 
-	/** Outlines a plot's tile and labels it with the action word. */
-	private void highlightPlot(Graphics2D graphics, GameObject plot, String label, Color color)
+	/**
+	 * Whether the cans and water barrels should glow: refilling is the next action, or it is between runs and a
+	 * can is not full while the refill reminder is on.
+	 */
+	static boolean refillDue(TitheFarmConfig config, RunSnapshot snapshot)
 	{
-		Polygon poly = plot.getCanvasTilePoly();
-		if (poly != null)
-			OverlayUtil.renderPolygon(graphics, poly, color);
-
-		Point text = plot.getCanvasTextLocation(graphics, label, 0);
-		if (text != null)
-			OverlayUtil.renderTextLocation(graphics, text, label, color);
+		boolean refillNext = config.highlightNextAction()
+			&& snapshot.getAdvice().getAction() == NextAction.REFILL_WATER;
+		boolean topUp = config.waterRefillWarning() && snapshot.isBetweenRuns()
+			&& !snapshot.getStatus().isCansFull();
+		return refillNext || topUp;
 	}
 
-	/** Outlines each of the given objects by convex hull and labels the first with the action word. */
-	private void highlightObjects(Graphics2D graphics, Collection<GameObject> objects, String label, Color color)
+	/** Whether the fruit and the sacks should glow: 100 or more fruit is carried. */
+	static boolean bonusDeposit(RunSnapshot snapshot)
 	{
-		boolean labelled = false;
-		for (GameObject object : objects)
+		return snapshot.getStatus().getCarried() >= ActionAdvisor.BONUS_BATCH;
+	}
+
+	/**
+	 * Draws the current plot and the predicted ones after it, fading step by step, each in its action's color. The
+	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape. Only the current
+	 * plot is filled; the ones after it are outlines.
+	 */
+	private void highlightTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
+	{
+		List<ActionAdvisor.Advice> trail = snapshot.getTrail();
+		for (int step = trail.size() - 1; step >= 0; step--)
 		{
-			Shape hull = object.getConvexHull();
-			if (hull != null)
-				OverlayUtil.renderPolygon(graphics, hull, color);
-
-			if (!labelled)
-			{
-				Point text = object.getCanvasTextLocation(graphics, label, 0);
-				if (text != null)
-				{
-					OverlayUtil.renderTextLocation(graphics, text, label, color);
-					labelled = true;
-				}
-			}
-		}
-	}
-
-	/** Highlights the seed table if it is loaded in the scene. */
-	private void highlightSeedTable(Graphics2D graphics, Color color)
-	{
-		GameObject seedTable = plotTracker.getSeedTable();
-		if (seedTable == null)
-			return;
-
-		Shape hull = seedTable.getConvexHull();
-		if (hull != null)
-			OverlayUtil.renderPolygon(graphics, hull, color);
-
-		Point text = seedTable.getCanvasTextLocation(graphics, "Seeds", 0);
-		if (text != null)
-			OverlayUtil.renderTextLocation(graphics, text, "Seeds", color);
-	}
-
-	/** Boxes the first inventory slot whose item id the predicate accepts. */
-	private void highlightInventory(Graphics2D graphics, IntPredicate wanted, Color color)
-	{
-		Widget inventory = client.getWidget(InterfaceID.Inventory.ITEMS);
-		if (inventory == null)
-			return;
-
-		for (Widget item : inventory.getDynamicChildren())
-		{
-			if (item == null || item.isHidden() || !wanted.test(item.getItemId()))
+			ActionAdvisor.Advice advice = trail.get(step);
+			GameObject plot = snapshot.plotAt(advice.getPlotIndex());
+			Color color = colorOf(advice.getAction());
+			if (plot == null || color == null)
 				continue;
 
-			Rectangle bounds = item.getBounds();
-			if (bounds != null)
-			{
-				graphics.setColor(color);
-				graphics.draw(bounds);
-			}
-
-			return;
+			double strength = HighlightStyle.fade(step) * glow;
+			HighlightStyle.draw(graphics, plot.getCanvasTilePoly(), color, strength, step == 0);
 		}
 	}
 
-	/** Whether an inventory item id has water to pour: a filled regular can or Gricoller's can. */
-	private boolean inventoryHas(IntPredicate wanted)
+	/** Draws the scene object that goes with an errand action: the seed table, or the sacks. */
+	private void highlightErrand(Graphics2D graphics, NextAction action, boolean bonusDeposit, double glow)
 	{
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null)
-			return false;
-
-		for (Item item : inventory.getItems())
+		switch (action)
 		{
-			if (item != null && wanted.test(item.getId()))
-				return true;
-		}
+			case GET_SEEDS:
+				GameObject table = plotTracker.getSeedTable();
+				if (table != null)
+					highlightObjects(graphics, Collections.singletonList(table), config.plantColor(), glow);
 
-		return false;
+				break;
+			case DEPOSIT_FRUIT:
+				if (!bonusDeposit)
+					highlightObjects(graphics, plotTracker.getSacks(), config.nextActionColor(), glow);
+
+				break;
+			default:
+				break;
+		}
 	}
 
-	/** Whether an item id is a watering can that can still pour — a filled regular can or Gricoller's can. */
-	private static boolean isFilledCan(int itemId)
+	/** The highlight color for a plot action, or {@code null} for an action that is not drawn on a plot. */
+	private Color colorOf(NextAction action)
 	{
-		return TitheFarmIds.regularCanCharges(itemId) > 0 || itemId == TitheFarmIds.GRICOLLER_CAN;
+		switch (action)
+		{
+			case PLANT_SEED:
+				return config.plantColor();
+			case WATER_PLANT:
+				return config.waterColor();
+			case HARVEST:
+				return config.harvestColor();
+			case CLEAR_DEAD:
+				return config.clearColor();
+			default:
+				return null;
+		}
+	}
+
+	/** Draws each of the given objects' outlines. */
+	private void highlightObjects(Graphics2D graphics, Collection<GameObject> objects, Color color, double strength)
+	{
+		for (GameObject object : objects)
+			HighlightStyle.draw(graphics, outline(object), color, strength);
+	}
+
+	/** An object's clickbox, falling back to its convex hull when the clickbox is not available. */
+	private static Shape outline(GameObject object)
+	{
+		Shape clickbox = object.getClickbox();
+		return clickbox != null ? clickbox : object.getConvexHull();
 	}
 }

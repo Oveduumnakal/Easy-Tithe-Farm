@@ -26,7 +26,9 @@ package com.oveduumnakal.tithefarm;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.junit.Test;
 
@@ -34,52 +36,92 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-/** Verifies the snake ordering and crop-count trimming of the route planner. */
+/** Verifies the automatic loop, crop-count trimming, and preferred-order handling of the route planner. */
 public class PlantRouteTest
 {
-	private static List<int[]> grid3x3Shuffled()
+	/** Two paths: columns x=0 and x=4 share one, columns x=10 and x=14 share the other; three levels each. */
+	private static List<int[]> twoPaths()
 	{
-		return new ArrayList<>(Arrays.asList(
-			new int[]{2, 2}, new int[]{0, 0}, new int[]{1, 1}, new int[]{2, 0},
-			new int[]{0, 2}, new int[]{1, 0}, new int[]{2, 1}, new int[]{0, 1},
-			new int[]{1, 2}));
+		List<int[]> tiles = new ArrayList<>();
+		for (int x : new int[]{0, 4, 10, 14})
+		{
+			for (int y : new int[]{0, 3, 6})
+				tiles.add(new int[]{x, y});
+		}
+
+		Collections.shuffle(tiles, new Random(7));
+		return tiles;
 	}
 
-	@Test
-	public void snakesRowsAlternatingDirection()
+	private static void assertRoute(int[][] expected, List<int[]> route)
 	{
-		List<int[]> route = PlantRoute.order(grid3x3Shuffled(), 9);
-		int[][] expected =
-		{
-			{0, 0}, {1, 0}, {2, 0},
-			{2, 1}, {1, 1}, {0, 1},
-			{0, 2}, {1, 2}, {2, 2}
-		};
 		assertEquals(expected.length, route.size());
 		for (int i = 0; i < expected.length; i++)
 			assertArrayEquals("index " + i, expected[i], route.get(i));
 	}
 
 	@Test
-	public void trimsToCropCount()
+	public void loopsSouthDownOnePathAndBackNorthUpTheNext()
 	{
-		List<int[]> route = PlantRoute.order(grid3x3Shuffled(), 4);
-		int[][] expected = {{0, 0}, {1, 0}, {2, 0}, {2, 1}};
-		assertEquals(4, route.size());
-		for (int i = 0; i < expected.length; i++)
-			assertArrayEquals(expected[i], route.get(i));
+		int[][] expected =
+		{
+			{0, 6}, {4, 6}, {4, 3}, {0, 3}, {0, 0}, {4, 0},
+			{10, 0}, {14, 0}, {14, 3}, {10, 3}, {10, 6}, {14, 6}
+		};
+		assertRoute(expected, PlantRoute.order(twoPaths(), 12));
+	}
+
+	@Test
+	public void smallRunStaysAtTheNorthEdgeOfBothPaths()
+	{
+		int[][] expected = {{0, 6}, {4, 6}, {10, 6}, {14, 6}};
+		assertRoute(expected, PlantRoute.order(twoPaths(), 4));
+	}
+
+	@Test
+	public void touchingColumnsAreWalkedFromTheirOwnPaths()
+	{
+		List<int[]> tiles = Arrays.asList(
+			new int[]{0, 0}, new int[]{0, 3},
+			new int[]{3, 0}, new int[]{3, 3},
+			new int[]{8, 0}, new int[]{8, 3});
+		int[][] expected =
+		{
+			{0, 3}, {0, 0},
+			{3, 0}, {8, 0}, {8, 3}, {3, 3}
+		};
+		assertRoute(expected, PlantRoute.order(tiles, 6));
+	}
+
+	@Test
+	public void twentyOnTheRealFarmLoopsBackBesidePlotOne()
+	{
+		List<int[]> route = PlantRoute.order(TitheRoutesTest.farm(), 20);
+		assertEquals(20, route.size());
+		assertArrayEquals(new int[]{1811, 3513}, route.get(0));
+		assertArrayEquals(new int[]{1826, 3513}, route.get(19));
+		for (int[] tile : route)
+			assertTrue("stays north of the second south row", tile[1] >= 3498);
+	}
+
+	@Test
+	public void preferredOrderComesFirstAndAutomaticFillsTheRest()
+	{
+		List<int[]> preferred = Arrays.asList(new int[]{14, 6}, new int[]{99, 99}, new int[]{0, 0});
+		int[][] expected = {{14, 6}, {0, 0}, {0, 6}, {4, 6}};
+		assertRoute(expected, PlantRoute.order(twoPaths(), preferred, 4));
 	}
 
 	@Test
 	public void zeroOrNegativeCountIsEmpty()
 	{
-		assertTrue(PlantRoute.order(grid3x3Shuffled(), 0).isEmpty());
-		assertTrue(PlantRoute.order(grid3x3Shuffled(), -5).isEmpty());
+		assertTrue(PlantRoute.order(twoPaths(), 0).isEmpty());
+		assertTrue(PlantRoute.order(twoPaths(), -5).isEmpty());
 	}
 
 	@Test
 	public void countAboveAvailableReturnsAll()
 	{
-		assertEquals(9, PlantRoute.order(grid3x3Shuffled(), 50).size());
+		assertEquals(12, PlantRoute.order(twoPaths(), 50).size());
 	}
 }

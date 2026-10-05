@@ -24,6 +24,10 @@
  */
 package com.oveduumnakal.tithefarm;
 
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.ObjectID;
 import net.runelite.api.gameval.VarbitID;
@@ -60,11 +64,20 @@ final class TitheFarmIds
 	/** Number of growth object ids per tier: three stages of three, a grown, and a dead-grown. */
 	static final int TIER_SPAN = 11;
 
-	/** The water barrels players refill cans at (two-object barrel: {@code WATER_BARREL1} / {@code WATER_BARREL2}). */
+	/** A water barrel players refill cans at ({@code WATER_BARREL1}). */
 	static final int WATER_BARREL_A = ObjectID.WATER_BARREL1;
 
-	/** The second half of the two-object water barrel. */
+	/** The second generic water-barrel id ({@code WATER_BARREL2}). */
 	static final int WATER_BARREL_B = ObjectID.WATER_BARREL2;
+
+	/**
+	 * The farm-style water barrel ({@code FARM_WATER_BARREL1}). Which barrel family the Tithe Farm uses is not
+	 * confirmed in-game yet, so both families are tracked; only barrels loaded alongside the plots are drawn.
+	 */
+	static final int FARM_WATER_BARREL_A = ObjectID.FARM_WATER_BARREL1;
+
+	/** The second farm-style water-barrel id ({@code FARM_WATER_BARREL2}). */
+	static final int FARM_WATER_BARREL_B = ObjectID.FARM_WATER_BARREL2;
 
 	/** The sack of fruit deposit point, once produce has been added. */
 	static final int SACK_OF_FRUIT = ObjectID.TITHE_SACK_OF_FRUIT;
@@ -84,6 +97,43 @@ final class TitheFarmIds
 	/** Logavano seed (tier C). */
 	static final int SEED_LOGAVANO = ItemID.HOSIDIUS_TITHE_SEED_C;
 
+	/** Golovanova fruit (tier A produce). */
+	static final int FRUIT_GOLOVANOVA = ItemID.HOSIDIUS_TITHE_FRUIT_A;
+
+	/** Bologano fruit (tier B produce). */
+	static final int FRUIT_BOLOGANO = ItemID.HOSIDIUS_TITHE_FRUIT_B;
+
+	/** Logavano fruit (tier C produce). */
+	static final int FRUIT_LOGAVANO = ItemID.HOSIDIUS_TITHE_FRUIT_C;
+
+	/** Farmer's strawhat, both the male and female version. */
+	static final int FARMERS_HAT = ItemID.TITHE_REWARD_HAT_MALE;
+	static final int FARMERS_HAT_FEMALE = ItemID.TITHE_REWARD_HAT_FEMALE;
+
+	/** Farmer's jacket, and its female version Farmer's shirt. */
+	static final int FARMERS_TORSO = ItemID.TITHE_REWARD_TORSO_MALE;
+	static final int FARMERS_TORSO_FEMALE = ItemID.TITHE_REWARD_TORSO_FEMALE;
+
+	/** Farmer's boro trousers, both versions. */
+	static final int FARMERS_LEGS = ItemID.TITHE_REWARD_LEGS_MALE;
+	static final int FARMERS_LEGS_FEMALE = ItemID.TITHE_REWARD_LEGS_FEMALE;
+
+	/** Farmer's boots, both versions. */
+	static final int FARMERS_BOOTS = ItemID.TITHE_REWARD_FEET_MALE;
+	static final int FARMERS_BOOTS_FEMALE = ItemID.TITHE_REWARD_FEET_FEMALE;
+
+	/** Spade, which every Tithe Farm run should carry. */
+	static final int SPADE = ItemID.SPADE;
+
+	/** Seed dibber, needed to plant unless the player has learned barehanded planting. */
+	static final int SEED_DIBBER = ItemID.DIBBER;
+
+	/** Potions that restore run energy: energy, super energy, and stamina, every dose. */
+	private static final Set<Integer> RUN_RESTORE = ImmutableSet.of(
+		ItemID._4DOSE1ENERGY, ItemID._3DOSE1ENERGY, ItemID._2DOSE1ENERGY, ItemID._1DOSE1ENERGY,
+		ItemID._4DOSE2ENERGY, ItemID._3DOSE2ENERGY, ItemID._2DOSE2ENERGY, ItemID._1DOSE2ENERGY,
+		ItemID._4DOSESTAMINA, ItemID._3DOSESTAMINA, ItemID._2DOSESTAMINA, ItemID._1DOSESTAMINA);
+
 	/** Gricoller's fertiliser (reduces watering; optional). */
 	static final int FERTILISER = ItemID.HOSIDIUS_TITHE_FERTILISER;
 
@@ -102,11 +152,32 @@ final class TitheFarmIds
 	/** Gricoller's watering can ({@code ZEAH_WATERINGCAN}); its charges live in {@link #GRICOLLER_CHARGES_VARBIT}. */
 	static final int GRICOLLER_CAN = ItemID.ZEAH_WATERINGCAN;
 
+	/** Charges a full Gricoller's watering can holds. */
+	static final int GRICOLLER_CAN_CAPACITY = 1000;
+
 	/** Varbit holding the charge count of Gricoller's watering can. */
 	static final int GRICOLLER_CHARGES_VARBIT = VarbitID.ZEAH_WATERINGCAN_CHARGES;
 
+	/** Varbit holding the fruit deposited in the current game (resets on leaving the farm). */
+	static final int SCORE_VARBIT = VarbitID.HOSIDIUS_TITHE_SCORE;
+
+	/** Varbit holding the player's spendable Tithe Farm points. */
+	static final int POINTS_VARBIT = VarbitID.HOSIDIUS_TITHE_REWARDPOINTS;
+
+	/**
+	 * Map region of the farm and its lobby. The farm instance is copied from this region, and the lobby with
+	 * Farmer Gricoller's reward shop sits inside it at about (1800,3502).
+	 */
+	static final int FARM_REGION = 7222;
+
 	/** Waters a single plant needs across its life — one per growth stage. */
 	static final int WATERS_PER_CROP = 3;
+
+	/** Game ticks a plant spends in one growth stage (one minute). Missing its water by then kills it. */
+	static final int STAGE_TICKS = 100;
+
+	/** Backpack slot count, used to tell when a harvest would not fit. */
+	static final int INVENTORY_SIZE = 28;
 
 	private TitheFarmIds()
 	{
@@ -118,10 +189,11 @@ final class TitheFarmIds
 		return objectId == PLOT_EMPTY || (objectId >= PLOT_GROWTH_FIRST && objectId <= PLOT_GROWTH_LAST);
 	}
 
-	/** Whether an object id is one of the two water-barrel halves. */
+	/** Whether an object id is a water barrel of either family. */
 	static boolean isWaterBarrel(int objectId)
 	{
-		return objectId == WATER_BARREL_A || objectId == WATER_BARREL_B;
+		return objectId == WATER_BARREL_A || objectId == WATER_BARREL_B
+			|| objectId == FARM_WATER_BARREL_A || objectId == FARM_WATER_BARREL_B;
 	}
 
 	/** Whether an object id is the fruit-deposit sack in either its empty or filled form. */
@@ -134,6 +206,18 @@ final class TitheFarmIds
 	static boolean isSeed(int itemId)
 	{
 		return itemId == SEED_GOLOVANOVA || itemId == SEED_BOLOGANO || itemId == SEED_LOGAVANO;
+	}
+
+	/** Whether an item id is a potion that restores run energy. */
+	static boolean isRunRestore(int itemId)
+	{
+		return RUN_RESTORE.contains(itemId);
+	}
+
+	/** Whether an item id is Tithe Farm produce of any tier. */
+	static boolean isFruit(int itemId)
+	{
+		return itemId == FRUIT_GOLOVANOVA || itemId == FRUIT_BOLOGANO || itemId == FRUIT_LOGAVANO;
 	}
 
 	/**

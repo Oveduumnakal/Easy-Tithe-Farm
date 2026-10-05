@@ -27,8 +27,9 @@ package com.oveduumnakal.tithefarm;
 /**
  * The state of a single Tithe Farm plot, decoded from its scene object id.
  *
- * <p>A plot moves EMPTY -> (plant a seed) -> UNWATERED -> (water it) -> WATERED -> (it grows) -> UNWATERED at
- * the next stage, and so on for three stages, ending GROWN (harvestable). Miss a stage's water before the
+ * <p>A plot moves EMPTY &rarr; (plant a seed) &rarr; UNWATERED &rarr; (water it) &rarr; WATERED &rarr;
+ * (it grows) &rarr; UNWATERED at the next stage, and so on for three stages, ending GROWN
+ * (harvestable). Miss a stage's water before the
  * plot advances and it becomes DEAD. The decode mirrors RuneLite's built-in Tithe Farm plugin: each seed
  * tier owns eleven consecutive object ids — three stages of dry/wet/dead, a grown id, then a dead-grown id —
  * and the state is the id's offset below its tier's grown id, taken modulo three.
@@ -120,6 +121,18 @@ enum TithePlotState
 			return TitheFarmIds.WATERS_PER_CROP - stage;
 
 		return 0;
+	}
+
+	/**
+	 * Whether an object id is a seed that was planted moments ago: unwatered at growth stage 1. A plot that
+	 * changes from {@link #EMPTY} to this id has just been planted.
+	 *
+	 * @param objectId the plot object's id
+	 * @return true for a stage-1 unwatered plant
+	 */
+	static boolean isFreshSeed(int objectId)
+	{
+		return fromObjectId(objectId) == UNWATERED && stageOf(objectId) == 1;
 	}
 
 	/** The grown (harvestable) object id of the tier that owns the given growth object id. */

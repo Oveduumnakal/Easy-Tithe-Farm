@@ -34,78 +34,225 @@ import static org.junit.Assert.assertEquals;
 /** Verifies the next-action priority ordering. */
 public class ActionAdvisorTest
 {
-	private static List<TithePlotState> states(TithePlotState... values)
+	private static final int EMPTY = 27383;
+	private static final int FRESH = 27384;
+	private static final int STAGE1_WET = 27385;
+	private static final int DEAD = 27386;
+	private static final int STAGE2_DRY = 27387;
+	private static final int STAGE2_WET = 27388;
+	private static final int GROWN = 27393;
+
+	private static PlotInfo plot(int id)
+	{
+		return PlotInfo.of(id, 0);
+	}
+
+	private static PlotInfo aged(int id, int ticks)
+	{
+		return PlotInfo.of(id, ticks);
+	}
+
+	private static List<PlotInfo> plots(PlotInfo... values)
 	{
 		return Arrays.asList(values);
+	}
+
+	private static ActionAdvisor.Advice decide(List<PlotInfo> plots, int seeds, int water)
+	{
+		return decide(plots, seeds, water, 20);
+	}
+
+	private static ActionAdvisor.Advice decide(List<PlotInfo> plots, int seeds, int water, int cropCount)
+	{
+		return ActionAdvisor.decide(plots, seeds, water, false, false, ActionAdvisor.plantSlots(plots, cropCount),
+			false);
+	}
+
+	private static void assertAdvice(NextAction action, int index, ActionAdvisor.Advice advice)
+	{
+		assertEquals(action, advice.getAction());
+		assertEquals(index, advice.getPlotIndex());
 	}
 
 	@Test
 	public void plantsIntoEmptyWhenHoldingSeeds()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.EMPTY, TithePlotState.EMPTY), true, 60);
-		assertEquals(NextAction.PLANT_SEED, advice.getAction());
-		assertEquals(0, advice.getPlotIndex());
+		assertAdvice(NextAction.PLANT_SEED, 0, decide(plots(plot(EMPTY), plot(EMPTY)), 20, 60));
 	}
 
 	@Test
-	public void collectsSeedsWhenEmptyPlotButNoSeeds()
+	public void watersAFreshSeedBeforePlantingTheNext()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(states(TithePlotState.EMPTY), false, 60);
-		assertEquals(NextAction.GET_SEEDS, advice.getAction());
-		assertEquals(-1, advice.getPlotIndex());
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(plots(plot(FRESH), plot(EMPTY)), 19, 60));
 	}
 
 	@Test
-	public void watersFirstUnwateredWhenWaterAvailable()
+	public void keepsPlantingWhenAnOldPlantJustAgedIntoItsNextStage()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.WATERED, TithePlotState.UNWATERED, TithePlotState.UNWATERED), true, 5);
-		assertEquals(NextAction.WATER_PLANT, advice.getAction());
-		assertEquals(1, advice.getPlotIndex());
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, 5), plot(STAGE1_WET), plot(EMPTY));
+		assertAdvice(NextAction.PLANT_SEED, 2, decide(run, 18, 60));
 	}
 
 	@Test
-	public void refillsWhenUnwateredButNoWater()
+	public void leavesThePassForAPlantNearTheEndOfItsStage()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(states(TithePlotState.UNWATERED), true, 0);
-		assertEquals(NextAction.REFILL_WATER, advice.getAction());
-		assertEquals(-1, advice.getPlotIndex());
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, ActionAdvisor.URGENT_TICKS), plot(STAGE1_WET), plot(EMPTY));
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 18, 60));
 	}
 
 	@Test
-	public void wateringOutranksHarvest()
+	public void watersTheLongestWaitingPlantRatherThanTheStartOfTheRoute()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.GROWN, TithePlotState.UNWATERED), true, 3);
-		assertEquals(NextAction.WATER_PLANT, advice.getAction());
-		assertEquals(1, advice.getPlotIndex());
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, 0), aged(STAGE2_DRY, 30), aged(STAGE2_DRY, 22));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 60));
+	}
+
+	@Test
+	public void watersInRouteOrderWhenPlantsHaveWaitedEqually()
+	{
+		List<PlotInfo> run = plots(plot(STAGE2_WET), plot(STAGE2_DRY), plot(STAGE2_DRY));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 5));
+	}
+
+	@Test
+	public void refillsWhenAPlantNeedsWaterAndNoneIsLeft()
+	{
+		assertAdvice(NextAction.REFILL_WATER, -1, decide(plots(plot(STAGE2_DRY)), 0, 0));
+	}
+
+	@Test
+	public void refillsInsteadOfPlantingASeedItCannotWater()
+	{
+		List<PlotInfo> run = plots(plot(STAGE2_WET), plot(EMPTY));
+		assertAdvice(NextAction.REFILL_WATER, -1, decide(run, 5, 3));
+	}
+
+	@Test
+	public void clearsDeadPlantWhenItIsNextInTheRoute()
+	{
+		assertAdvice(NextAction.CLEAR_DEAD, 0, decide(plots(plot(DEAD), plot(EMPTY)), 5, 60));
+		assertAdvice(NextAction.PLANT_SEED, 0, decide(plots(plot(EMPTY), plot(DEAD)), 5, 60));
+	}
+
+	@Test
+	public void ignoresDeadPlantWithoutSeedsToReplant()
+	{
+		assertAdvice(NextAction.WAIT, -1, decide(plots(plot(DEAD), plot(STAGE1_WET)), 0, 60));
 	}
 
 	@Test
 	public void harvestsGrownWhenNothingNeedsWater()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.WATERED, TithePlotState.GROWN), true, 3);
-		assertEquals(NextAction.HARVEST, advice.getAction());
-		assertEquals(1, advice.getPlotIndex());
+		assertAdvice(NextAction.HARVEST, 1, decide(plots(plot(STAGE2_WET), plot(GROWN)), 0, 3));
 	}
 
 	@Test
-	public void plantsRemainingEmptyOverWaiting()
+	public void harvestsEveryGrownPlantBeforeReplanting()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.WATERED, TithePlotState.EMPTY), true, 3);
-		assertEquals(NextAction.PLANT_SEED, advice.getAction());
-		assertEquals(1, advice.getPlotIndex());
+		assertAdvice(NextAction.HARVEST, 1, decide(plots(plot(EMPTY), plot(GROWN)), 20, 60));
+		assertAdvice(NextAction.PLANT_SEED, 0, decide(plots(plot(EMPTY), plot(EMPTY)), 20, 60));
+	}
+
+	@Test
+	public void refillsBeforeTheFirstSeedUnlessTheWholeRunIsCovered()
+	{
+		PlotInfo[] empty = new PlotInfo[20];
+		Arrays.fill(empty, plot(EMPTY));
+		assertAdvice(NextAction.REFILL_WATER, -1, decide(plots(empty), 20, 59));
+		assertAdvice(NextAction.PLANT_SEED, 0, decide(plots(empty), 20, 60));
+	}
+
+	@Test
+	public void depositsWhenBackpackIsFullAndAPlantIsGrown()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, true, true, 19, false);
+		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, advice);
+	}
+
+	@Test
+	public void waitsInsteadOfDepositingMidRun()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(STAGE1_WET)), 0, 60, true, false, 19, false);
+		assertAdvice(NextAction.WAIT, -1, advice);
+	}
+
+	@Test
+	public void depositsBetweenRunsBeforeTheFirstSeed()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 20, 60, true, false, 20,
+			false);
+		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, advice);
+	}
+
+	@Test
+	public void collectsSeedsWhenEmptyPlotButNoSeeds()
+	{
+		assertAdvice(NextAction.GET_SEEDS, -1, decide(plots(plot(EMPTY)), 0, 60));
 	}
 
 	@Test
 	public void waitsWhenAllWateredAndGrowing()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(
-			states(TithePlotState.WATERED, TithePlotState.WATERED), true, 3);
-		assertEquals(NextAction.WAIT, advice.getAction());
-		assertEquals(-1, advice.getPlotIndex());
+		assertAdvice(NextAction.WAIT, -1, decide(plots(plot(STAGE1_WET), plot(STAGE2_WET)), 0, 3));
+	}
+
+	@Test
+	public void watersAPlantOffTheRouteListedAfterIt()
+	{
+		List<PlotInfo> run = plots(plot(EMPTY), plot(STAGE1_WET), plot(STAGE2_DRY));
+		assertAdvice(NextAction.WATER_PLANT, 2, decide(run, 0, 60, 2));
+	}
+
+	@Test
+	public void stopsSuggestingSeedsOnceTheCropCountIsInTheGround()
+	{
+		List<PlotInfo> run = plots(plot(EMPTY), plot(STAGE1_WET), plot(STAGE2_WET));
+		assertAdvice(NextAction.WAIT, -1, decide(run, 18, 60, 2));
+		assertAdvice(NextAction.PLANT_SEED, 0, decide(run, 18, 60, 3));
+	}
+
+	@Test
+	public void plantSlotsCountPlantsAnywhereButNotDeadOnes()
+	{
+		List<PlotInfo> run = plots(plot(EMPTY), plot(DEAD), plot(STAGE1_WET), plot(GROWN));
+		assertEquals(18, ActionAdvisor.plantSlots(run, 20));
+		assertEquals(0, ActionAdvisor.plantSlots(run, 1));
+	}
+
+	@Test
+	public void lastRunNeverSendsYouForSeeds()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(STAGE1_WET)), 0, 60, false, false,
+			5, true);
+		assertAdvice(NextAction.WAIT, -1, advice);
+	}
+
+	@Test
+	public void lastRunSaysLeaveOnceEverythingIsInTheSack()
+	{
+		assertAdvice(NextAction.LEAVE, -1, ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 5, 60, false, false,
+			0, true));
+		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, ActionAdvisor.decide(plots(plot(EMPTY)), 0, 60, true, false,
+			0, true));
+	}
+
+	@Test
+	public void lastRunPlantsJustEnoughToReachTheNextHundred()
+	{
+		assertEquals(15, ActionAdvisor.wrapUpSeeds(80, 0, 5, 20));
+		assertEquals(0, ActionAdvisor.wrapUpSeeds(40, 0, 20, 20));
+		assertEquals(0, ActionAdvisor.wrapUpSeeds(100, 0, 0, 20));
+		assertEquals(20, ActionAdvisor.wrapUpSeeds(60, 10, 10, 20));
+	}
+
+	@Test
+	public void betweenRunsACanNotFullHoldsTheFirstSeed()
+	{
+		ActionAdvisor.Advice plant = new ActionAdvisor.Advice(NextAction.PLANT_SEED, 0);
+		assertAdvice(NextAction.REFILL_WATER, -1, ActionAdvisor.topUpFirst(plant, true, false));
+		assertAdvice(NextAction.PLANT_SEED, 0, ActionAdvisor.topUpFirst(plant, true, true));
+		assertAdvice(NextAction.PLANT_SEED, 0, ActionAdvisor.topUpFirst(plant, false, false));
+		ActionAdvisor.Advice seeds = new ActionAdvisor.Advice(NextAction.GET_SEEDS, -1);
+		assertAdvice(NextAction.GET_SEEDS, -1, ActionAdvisor.topUpFirst(seeds, true, false));
 	}
 }

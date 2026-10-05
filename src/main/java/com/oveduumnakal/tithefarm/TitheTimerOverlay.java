@@ -24,9 +24,9 @@
  */
 package com.oveduumnakal.tithefarm;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -38,20 +38,32 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 
 /**
- * Draws the numbered planting route over the plots: each plot in the run is outlined and labelled with its
- * order in the snake, so the player can plant, then water, in a fixed sequence. The order comes from the pure
- * {@link PlantRoute}; this overlay only maps its ordered tiles back to the scene objects and paints them.
+ * Draws a countdown over every plant waiting for water — the time left before it dies — raised above the plot
+ * so it never collides with the route number. Green while there is plenty of time, yellow inside the warning
+ * window plus a little, red inside the warning window itself. In minimal view only the targeted plant's timer
+ * is drawn.
  */
-class TitheRouteOverlay extends Overlay
+class TitheTimerOverlay extends Overlay
 {
+	/** Height above the plot, in local units, where the countdown is drawn. */
+	private static final int TEXT_HEIGHT = 160;
+
+	/** Extra seconds before the warning window where the countdown turns yellow. */
+	private static final int CAUTION_SECONDS = 15;
+
+	private static final Color SAFE = new Color(120, 255, 120);
+	private static final Color CAUTION = Color.YELLOW;
+
 	private final TitheFarmConfig config;
 	private final TithePlotTracker plotTracker;
+	private final TitheRun run;
 
 	@Inject
-	TitheRouteOverlay(TitheFarmConfig config, TithePlotTracker plotTracker)
+	TitheTimerOverlay(TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run)
 	{
 		this.config = config;
 		this.plotTracker = plotTracker;
+		this.run = run;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
@@ -59,25 +71,35 @@ class TitheRouteOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!config.showRoute() || !plotTracker.inTitheFarm())
+		if (!config.showTimers() || !plotTracker.inTitheFarm())
 			return null;
 
-		List<GameObject> route = TitheRoutePlots.ordered(plotTracker.getPlots(), config.cropCount());
+		RunSnapshot snapshot = run.snapshot();
+		GameObject target = snapshot.getTargetPlot();
+		List<GameObject> route = snapshot.getRoute();
+		List<PlotInfo> plots = snapshot.getPlots();
 		for (int i = 0; i < route.size(); i++)
-			drawPlot(graphics, route.get(i), Integer.toString(i + 1));
+		{
+			int ticks = plots.get(i).ticksUntilDeath();
+			if (ticks < 0 || (config.minimalView() && route.get(i) != target))
+				continue;
+
+			String text = TitheTime.format(ticks);
+			Point location = route.get(i).getCanvasTextLocation(graphics, text, TEXT_HEIGHT);
+			if (location != null)
+				OverlayUtil.renderTextLocation(graphics, location, text, colorFor(ticks));
+		}
 
 		return null;
 	}
 
-	/** Outlines one plot and paints its route number at the tile centre. */
-	private void drawPlot(Graphics2D graphics, GameObject plot, String label)
+	/** The countdown color for the ticks left. */
+	private Color colorFor(int ticks)
 	{
-		Polygon poly = plot.getCanvasTilePoly();
-		if (poly != null)
-			OverlayUtil.renderPolygon(graphics, poly, config.routeColor());
+		int seconds = TitheTime.seconds(ticks);
+		if (seconds <= config.deathWarnSeconds())
+			return config.warningColor();
 
-		Point text = plot.getCanvasTextLocation(graphics, label, 0);
-		if (text != null)
-			OverlayUtil.renderTextLocation(graphics, text, label, config.routeColor());
+		return seconds <= config.deathWarnSeconds() + CAUTION_SECONDS ? CAUTION : SAFE;
 	}
 }

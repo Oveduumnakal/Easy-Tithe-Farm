@@ -33,28 +33,30 @@ import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 
 /**
- * Guards against planting a run the player cannot finish watering. When enabled and the carried water is below
- * what the whole run needs, and the menu contains a plant action on an empty plot, {@code "Cancel"} is moved to
- * the top so a stray left-click cancels rather than sinks a seed. It only ever reorders — no entry is removed —
- * mirroring the Cancel-to-top guard in the Goat Pit Indicators plugin. Runs every frame on {@code PostMenuSort}
- * so it fixes both the left-click default and the right-click ordering.
+ * Guards against starting or growing a run the player cannot finish watering. When enabled, the menu contains a
+ * plant action on an empty plot, and the water carried would not cover what the crops already in the ground
+ * still need plus three for every seed the run still has room for, {@code "Cancel"} is moved to the top so a
+ * stray left-click cancels rather than sinks a seed. The need is read from the plots, so watering mid-run never
+ * trips it falsely.
+ * It only ever reorders — no entry is removed — mirroring the Cancel-to-top guard in the Goat Pit Indicators
+ * plugin. Runs every frame on {@code PostMenuSort} so it fixes both the left-click default and the right-click
+ * ordering.
  */
 @Singleton
 class TitheMenuSwapper
 {
 	private final Client client;
 	private final TitheFarmConfig config;
-	private final WaterTracker waterTracker;
 	private final TithePlotTracker plotTracker;
+	private final TitheRun run;
 
 	@Inject
-	TitheMenuSwapper(Client client, TitheFarmConfig config, WaterTracker waterTracker,
-		TithePlotTracker plotTracker)
+	TitheMenuSwapper(Client client, TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run)
 	{
 		this.client = client;
 		this.config = config;
-		this.waterTracker = waterTracker;
 		this.plotTracker = plotTracker;
+		this.run = run;
 	}
 
 	/** Applies the Cancel-to-top guard when water is short and a plant action is present. */
@@ -63,12 +65,9 @@ class TitheMenuSwapper
 		if (!config.blockPlantWhenShort() || !plotTracker.inTitheFarm())
 			return;
 
-		if (waterTracker.availableCharges() >= waterTracker.chargesNeeded(config.cropCount()))
-			return;
-
 		Menu menu = client.getMenu();
 		MenuEntry[] entries = menu.getMenuEntries();
-		if (entries.length < 2 || !hasPlantOnEmptyPlot(entries))
+		if (entries.length < 2 || !hasPlantOnEmptyPlot(entries) || run.snapshot().canAffordPlant())
 			return;
 
 		MenuEntry cancel = firstOfType(entries, MenuAction.CANCEL);
