@@ -28,20 +28,42 @@ package com.oveduumnakal.tithefarm;
 enum NextAction
 {
 	/** Plant a seed in the next empty plot. */
-	PLANT_SEED,
+	PLANT_SEED("Plant"),
 
-	/** Water the oldest plant that still needs it this stage. */
-	WATER_PLANT,
+	/** Water a plant that needs it this stage. */
+	WATER_PLANT("Water"),
 
 	/** Harvest a fully grown plant. */
-	HARVEST,
+	HARVEST("Harvest"),
 
-	/** Refill watering cans at the barrel — a plant needs water and none is left to pour. */
-	REFILL_WATER,
+	/** Clear a dead plant so the plot can be replanted. */
+	CLEAR_DEAD("Clear"),
+
+	/** Refill watering cans at the barrel — not enough water for what comes next. */
+	REFILL_WATER("Refill"),
+
+	/** Put the carried fruit in the sack — between runs, or mid-run only when a harvest would not fit. */
+	DEPOSIT_FRUIT("Deposit"),
 
 	/** Collect seeds — an empty plot is waiting but the backpack has no seeds. */
-	GET_SEEDS,
+	GET_SEEDS("Seeds"),
+
+	/** The last run is done — everything harvested and deposited — so leave through the farm door. */
+	LEAVE("Leave"),
 
 	/** Nothing to do this moment; plants are watered and still growing. */
-	WAIT
+	WAIT("Wait");
+
+	private final String label;
+
+	NextAction(String label)
+	{
+		this.label = label;
+	}
+
+	/** The short word drawn on the highlighted target and shown in the panel. */
+	String getLabel()
+	{
+		return label;
+	}
 }

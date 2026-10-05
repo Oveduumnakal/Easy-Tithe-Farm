@@ -25,58 +25,49 @@
 package com.oveduumnakal.tithefarm;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+
+import org.junit.Test;
 
 import net.runelite.api.GameObject;
-import net.runelite.api.coords.WorldPoint;
 
-/**
- * Bridges the client-free {@link PlantRoute} to live scene objects: turns the tracked plots into the ordered
- * list of plot objects the route visits. Both the route overlay (for numbering) and the highlight overlay (for
- * the next-action target) share this so they agree on order.
- */
-final class TitheRoutePlots
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+/** Verifies when a run counts as between runs, the only time the water barrel is outlined. */
+public class RunSnapshotTest
 {
-	private TitheRoutePlots()
-	{
-	}
+	private static final int EMPTY = 27383;
+	private static final int DEAD = 27386;
+	private static final int STAGE1_WET = 27385;
+	private static final int GROWN = 27393;
 
-	/**
-	 * The plot objects in planting-route order, trimmed to the crop count.
-	 *
-	 * @param plots the tracked plot objects, in any order
-	 * @param count the crop count for the run
-	 * @return the plot objects in route order
-	 */
-	static List<GameObject> ordered(Collection<GameObject> plots, int count)
+	private static RunSnapshot snapshotOf(int... ids)
 	{
-		Map<Long, GameObject> byTile = new HashMap<>();
-		List<int[]> tiles = new ArrayList<>();
-		for (GameObject plot : plots)
+		List<GameObject> route = new ArrayList<>();
+		List<PlotInfo> plots = new ArrayList<>();
+		for (int i = 0; i < ids.length; i++)
 		{
-			WorldPoint point = plot.getWorldLocation();
-			byTile.put(key(point.getX(), point.getY()), plot);
-			tiles.add(new int[]{point.getX(), point.getY()});
+			route.add(TestRuns.plot(ids[i], i));
+			plots.add(PlotInfo.of(ids[i], 0));
 		}
 
-		List<int[]> route = PlantRoute.order(tiles, count);
-		List<GameObject> ordered = new ArrayList<>();
-		for (int[] tile : route)
-		{
-			GameObject plot = byTile.get(key(tile[0], tile[1]));
-			if (plot != null)
-				ordered.add(plot);
-		}
-
-		return ordered;
+		return TestRuns.snapshot(route, plots, new ActionAdvisor.Advice(NextAction.WAIT, -1));
 	}
 
-	/** Packs a tile's world x and y into one long key. */
-	private static long key(int x, int y)
+	@Test
+	public void emptyFarmIsBetweenRuns()
 	{
-		return ((long) x << 32) | (y & 0xffffffffL);
+		assertTrue(snapshotOf(EMPTY, EMPTY).isBetweenRuns());
+		assertTrue(snapshotOf(EMPTY, DEAD).isBetweenRuns());
+		assertTrue(TestRuns.snapshot(new ArrayList<>(), Arrays.asList(), null).isBetweenRuns());
+	}
+
+	@Test
+	public void anyPlantInTheGroundMeansARunIsOn()
+	{
+		assertFalse(snapshotOf(EMPTY, STAGE1_WET).isBetweenRuns());
+		assertFalse(snapshotOf(EMPTY, GROWN).isBetweenRuns());
 	}
 }

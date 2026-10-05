@@ -122,6 +122,18 @@ enum TithePlotState
 		return 0;
 	}
 
+	/**
+	 * Whether an object id is a seed that was planted moments ago: unwatered at growth stage 1. A plot that
+	 * changes from {@link #EMPTY} to this id has just been planted.
+	 *
+	 * @param objectId the plot object's id
+	 * @return true for a stage-1 unwatered plant
+	 */
+	static boolean isFreshSeed(int objectId)
+	{
+		return fromObjectId(objectId) == UNWATERED && stageOf(objectId) == 1;
+	}
+
 	/** The grown (harvestable) object id of the tier that owns the given growth object id. */
 	private static int grownIdFor(int objectId)
 	{

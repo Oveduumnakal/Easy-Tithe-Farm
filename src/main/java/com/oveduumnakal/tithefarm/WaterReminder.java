@@ -30,27 +30,27 @@ import javax.inject.Singleton;
 import net.runelite.client.Notifier;
 
 /**
- * Fires a one-shot notification when the player's water drops below what the run needs, and resets once they
- * refill above it, so a single low-water run raises at most one alert rather than one per tick. The on-panel
- * warning is drawn separately by {@link TitheWaterOverlay}; this only handles the notification.
+ * Fires a one-shot notification when the water carried drops below what the run still needs (read from the
+ * plots, see {@link WaterTracker#runNeed}), and resets once the player refills above it, so a single
+ * low-water run raises at most one alert rather than one per tick. The on-panel warning is drawn separately
+ * by {@link TitheWaterOverlay}; this only handles the notification.
  */
 @Singleton
 class WaterReminder
 {
 	private final TitheFarmConfig config;
-	private final WaterTracker waterTracker;
 	private final TithePlotTracker plotTracker;
+	private final TitheRun run;
 	private final Notifier notifier;
 
 	private boolean notified;
 
 	@Inject
-	WaterReminder(TitheFarmConfig config, WaterTracker waterTracker, TithePlotTracker plotTracker,
-		Notifier notifier)
+	WaterReminder(TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run, Notifier notifier)
 	{
 		this.config = config;
-		this.waterTracker = waterTracker;
 		this.plotTracker = plotTracker;
+		this.run = run;
 		this.notifier = notifier;
 	}
 
@@ -63,9 +63,7 @@ class WaterReminder
 			return;
 		}
 
-		int needed = waterTracker.chargesNeeded(config.cropCount());
-		boolean short0 = waterTracker.availableCharges() < needed;
-		if (!short0)
+		if (!run.snapshot().isShort())
 		{
 			notified = false;
 			return;
@@ -73,7 +71,7 @@ class WaterReminder
 
 		if (config.notifyOnRefill() && !notified)
 		{
-			notifier.notify("Tithe Farm: low on water — refill at the barrel before planting more.");
+			notifier.notify("Tithe Farm: not enough water to finish the run. Refill at the barrel.");
 			notified = true;
 		}
 	}

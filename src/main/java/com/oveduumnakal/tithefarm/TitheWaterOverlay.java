@@ -35,22 +35,26 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 /**
- * A small panel showing how much water the player is carrying, how many crops that covers, and whether it is
- * short of the current run. Drawn only at the Tithe Farm. The panel reads live from {@link WaterTracker}; the
- * refill highlight and notification are handled separately.
+ * A small panel with the next action, the water carried against what the run still needs, warnings, the points
+ * with what the carried fruit would add, tonight's time and experience, and the progress of a route recording.
+ * Drawn only at the Tithe Farm. The next-action line
+ * doubles as a hint when the target is not in view, such as the seed table outside the farm. In minimal view the
+ * panel keeps only the next action, the last-run line, a recording in progress, and the red warnings.
  */
 class TitheWaterOverlay extends OverlayPanel
 {
 	private final TitheFarmConfig config;
-	private final WaterTracker waterTracker;
 	private final TithePlotTracker plotTracker;
+	private final TitheRun run;
+	private final SessionTracker session;
 
 	@Inject
-	TitheWaterOverlay(TitheFarmConfig config, WaterTracker waterTracker, TithePlotTracker plotTracker)
+	TitheWaterOverlay(TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run, SessionTracker session)
 	{
 		this.config = config;
-		this.waterTracker = waterTracker;
 		this.plotTracker = plotTracker;
+		this.run = run;
+		this.session = session;
 		setPosition(OverlayPosition.TOP_LEFT);
 	}
 
@@ -60,31 +64,130 @@ class TitheWaterOverlay extends OverlayPanel
 		if (!plotTracker.inTitheFarm())
 			return null;
 
-		int charges = waterTracker.availableCharges();
-		int needed = waterTracker.chargesNeeded(config.cropCount());
-		boolean short0 = config.waterRefillWarning() && charges < needed;
+		RunSnapshot snapshot = run.snapshot();
+		boolean warn = config.waterRefillWarning() && snapshot.isShort();
+		Color waterColor = warn ? config.warningColor() : Color.WHITE;
 		panelComponent.getChildren().add(TitleComponent.builder()
-			.text("Tithe Water")
+			.text("Tithe Farm")
 			.build());
 		panelComponent.getChildren().add(LineComponent.builder()
-			.left("Water")
-			.right(String.valueOf(charges))
-			.rightColor(short0 ? config.warningColor() : Color.WHITE)
+			.left("Next")
+			.right(nextText(snapshot))
 			.build());
-		panelComponent.getChildren().add(LineComponent.builder()
-			.left("Covers")
-			.right(charges / TitheFarmIds.WATERS_PER_CROP + " crops")
-			.build());
-		if (short0)
+		RunStatus status = snapshot.getStatus();
+		boolean minimal = config.minimalView();
+
+		if (status.isWrapUp())
 		{
 			panelComponent.getChildren().add(LineComponent.builder()
-				.left("Need")
-				.right(needed + " for " + config.cropCount())
+				.left("Last run")
+				.right(wrapUpText(snapshot))
+				.rightColor(config.nextActionColor())
+				.build());
+		}
+
+		if (!minimal || warn)
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Water")
+				.right(snapshot.getWater() + "/" + snapshot.getRunNeed())
+				.leftColor(waterColor)
+				.rightColor(waterColor)
+				.build());
+		}
+
+		if (snapshot.isRecording())
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Recording")
+				.right(snapshot.getRecordedCount() + " / " + config.cropCount())
+				.rightColor(config.nextActionColor())
+				.build());
+		}
+
+		addWarnings(status);
+		if (!minimal)
+			addSession(status);
+
+		return super.render(graphics);
+	}
+
+	/** Red lines for missing tools, a carried fertiliser, and low run energy. */
+	private void addWarnings(RunStatus status)
+	{
+		if (status.isEnergyLow(config.lowEnergyPercent()))
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Run energy")
+				.right(status.getEnergyPercent() + "%")
 				.leftColor(config.warningColor())
 				.rightColor(config.warningColor())
 				.build());
 		}
 
-		return super.render(graphics);
+		if (!status.getMissingTools().isEmpty())
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Missing")
+				.right(String.join(", ", status.getMissingTools()))
+				.leftColor(config.warningColor())
+				.rightColor(config.warningColor())
+				.build());
+		}
+
+		if (status.hasFertiliser())
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Fertiliser")
+				.right("drop it for wiki routes")
+				.leftColor(config.warningColor())
+				.rightColor(config.warningColor())
+				.build());
+		}
+	}
+
+	/**
+	 * The points and tonight's time and experience, each with what the carried fruit would add once deposited,
+	 * when enabled. The reward goal has its own box.
+	 */
+	private void addSession(RunStatus status)
+	{
+		if (!config.showSession())
+			return;
+
+		int points = session.points();
+		int pending = Math.min(DepositRewards.points(status.getDeposited(), status.getCarried()),
+			Math.max(0, Goal.POINTS_CAP - points));
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left("Points")
+			.right(pending > 0 ? points + " (+" + pending + ")" : String.valueOf(points))
+			.build());
+		String xp = SessionTracker.compactXp(session.xpTonight());
+		if (status.getPendingXp() > 0)
+			xp += " (+" + SessionTracker.compactXp(status.getPendingXp()) + ")";
+
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left("Tonight")
+			.right(TitheTime.format(session.ticksInFarm()) + "  " + xp + " xp")
+			.build());
+	}
+
+	/** What the last run still asks for: a few more seeds, finishing up, or leaving. */
+	private static String wrapUpText(RunSnapshot snapshot)
+	{
+		if (snapshot.getAdvice().getAction() == NextAction.LEAVE)
+			return "done, leave";
+
+		int seeds = snapshot.getStatus().getPlantLimit();
+		return seeds > 0 ? "plant " + seeds + " more" : "finish up";
+	}
+
+	/** The next-action word, with the route number for a plot action. */
+	private static String nextText(RunSnapshot snapshot)
+	{
+		NextAction action = snapshot.getAdvice().getAction();
+		String label = action.getLabel();
+		int number = snapshot.getTargetNumber();
+		return number > 0 ? label + " " + number : label;
 	}
 }
