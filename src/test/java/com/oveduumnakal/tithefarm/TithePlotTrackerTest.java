@@ -78,12 +78,35 @@ public class TithePlotTrackerTest
 	}
 
 	@Test
-	public void firstSightingStartsBothClocks()
+	public void firstSightingLeavesTheAgeUnknown()
 	{
 		assertEquals(-1, change(STAGE1_DRY, 10));
 		PlotInfo info = info(15);
-		assertEquals(5, info.getAgeTicks());
-		assertEquals(5, info.getStageAgeTicks());
+		assertEquals(PlotInfo.AGE_UNKNOWN, info.getAgeTicks());
+		assertEquals(PlotInfo.AGE_UNKNOWN, info.getStageAgeTicks());
+	}
+
+	@Test
+	public void aSceneReloadKeepsThePlotsClocks()
+	{
+		change(EMPTY, 0);
+		change(STAGE1_DRY, 10);
+		tracker.clearObjects();
+		assertTrue(tracker.getPlotsByTile().isEmpty());
+		assertEquals(STAGE1_DRY, change(STAGE1_DRY, 50));
+		PlotInfo info = info(90);
+		assertEquals(80, info.getAgeTicks());
+		assertEquals(80, info.getStageAgeTicks());
+	}
+
+	@Test
+	public void clearForgetsThePlotsClocks()
+	{
+		change(EMPTY, 0);
+		change(STAGE1_DRY, 10);
+		tracker.clear();
+		change(STAGE1_DRY, 50);
+		assertEquals(PlotInfo.AGE_UNKNOWN, info(90).getAgeTicks());
 	}
 
 	@Test
@@ -133,6 +156,7 @@ public class TithePlotTrackerTest
 	@Test
 	public void theSameIdAgainKeepsBothClocks()
 	{
+		change(EMPTY, 0);
 		change(STAGE1_DRY, 10);
 		assertEquals(STAGE1_DRY, change(STAGE1_DRY, 30));
 		PlotInfo info = info(40);

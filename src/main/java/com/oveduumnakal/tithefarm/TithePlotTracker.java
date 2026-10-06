@@ -46,6 +46,10 @@ import net.runelite.api.coords.WorldPoint;
  * (see {@link TithePlotState}); the tracker additionally remembers the tick each plot last changed id, which
  * gives the advisor a plant's age in its current id, and the tick each plant entered its growth stage, which
  * watering does not reset.
+ *
+ * <p>A plot seen for the first time has no known age: it may be deep into its stage, so its clocks start only at
+ * its first change. A scene reload drops the objects but keeps every plot's clocks, so a plot that comes back
+ * with the same id carries on where it was.
  */
 @Singleton
 class TithePlotTracker
@@ -79,10 +83,10 @@ class TithePlotTracker
 			WorldPoint tile = templateTile(object);
 			plots.put(tile, object);
 			Integer previous = lastIds.put(tile, id);
-			if (previous == null || previous != id)
+			if (previous != null && previous != id)
 			{
 				changedTicks.put(tile, tick);
-				if (previous == null || !isWatering(previous, id))
+				if (!isWatering(previous, id))
 					stageTicks.put(tile, tick);
 			}
 
@@ -132,14 +136,23 @@ class TithePlotTracker
 		}
 	}
 
-	/** Forgets every tracked object, for a world hop or a scene reload. */
+	/** Forgets every tracked object and every plot's clocks, for a world hop, a logout, or the plugin stopping. */
 	void clear()
 	{
-		plots.clear();
 		lastIds.clear();
 		changedTicks.clear();
 		stageTicks.clear();
 		plantedTicks.clear();
+		clearObjects();
+	}
+
+	/**
+	 * Forgets the scene's objects but keeps every plot's last id and clocks, for a scene reload: the plants keep
+	 * growing while the scene rebuilds, and each plot that respawns with the same id keeps its age.
+	 */
+	void clearObjects()
+	{
+		plots.clear();
 		waterBarrels.clear();
 		sacks.clear();
 		seedTable = null;

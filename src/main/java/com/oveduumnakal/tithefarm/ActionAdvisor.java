@@ -36,9 +36,9 @@ import java.util.function.Predicate;
  * played — plant and water each seed in one go, keep planting until the pass is done, then loop back:
  * <ol>
  * <li>Water a seed planted moments ago, so every seed is watered as it goes in.</li>
- * <li>Water a plant close to the end of its stage, the only thing that can still kill it — but only when the
- * plants and seeds ahead of it would not leave time to reach it in turn. A plant that the pass will reach in
- * time waits its turn, so a pass is not broken off to walk back to the start of the route.</li>
+ * <li>Water a plant close to the end of its stage, or of unknown age, the only thing that can still kill it — but
+ * only when the plants and seeds ahead of it would not leave time to reach it in turn. A plant that the pass
+ * will reach in time waits its turn, so a pass is not broken off to walk back to the start of the route.</li>
  * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried.
  * A smaller haul stays in the backpack, and fruit is never deposited mid-run unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
@@ -186,10 +186,16 @@ final class ActionAdvisor
 		return new Advice(NextAction.REFILL_WATER, -1);
 	}
 
-	/** Whether a plot is unwatered and far enough into its stage that it must be watered now. */
+	/**
+	 * Whether a plot is unwatered and far enough into its stage that it must be watered now. A plant of unknown
+	 * age, first seen mid-stage, may be about to die, so it counts as urgent.
+	 */
 	private static boolean isUrgent(PlotInfo plot)
 	{
-		return plot.getState() == TithePlotState.UNWATERED && plot.getAgeTicks() >= URGENT_TICKS;
+		if (plot.getState() != TithePlotState.UNWATERED)
+			return false;
+
+		return plot.getAgeTicks() == PlotInfo.AGE_UNKNOWN || plot.getAgeTicks() >= URGENT_TICKS;
 	}
 
 	/**
