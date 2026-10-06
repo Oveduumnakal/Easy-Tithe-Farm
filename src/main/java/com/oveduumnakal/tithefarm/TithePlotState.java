@@ -103,6 +103,20 @@ enum TithePlotState
 	}
 
 	/**
+	 * The seed tier a plot's plant belongs to: 0 Golovanova, 1 Bologano, 2 Logavano.
+	 *
+	 * @param objectId the plot object's id
+	 * @return the tier 0 to 2, or {@code -1} for the empty plot or a non-plot id
+	 */
+	static int tierOf(int objectId)
+	{
+		if (objectId < TitheFarmIds.PLOT_GROWTH_FIRST || objectId > TitheFarmIds.PLOT_GROWTH_LAST)
+			return -1;
+
+		return (objectId - TitheFarmIds.PLOT_GROWTH_FIRST) / TitheFarmIds.TIER_SPAN;
+	}
+
+	/**
 	 * How many more waters a plot needs before it is grown, given its object id. A fresh seed needs three; an
 	 * unwatered plant at stage {@code s} needs {@code 4 - s}; a watered plant at stage {@code s} needs
 	 * {@code 3 - s}. Empty, grown, dead, and non-plot ids need none.
@@ -138,7 +152,6 @@ enum TithePlotState
 	/** The grown (harvestable) object id of the tier that owns the given growth object id. */
 	private static int grownIdFor(int objectId)
 	{
-		int tierIndex = (objectId - TitheFarmIds.PLOT_GROWTH_FIRST) / TitheFarmIds.TIER_SPAN;
-		return TitheFarmIds.PLOT_A_GROWN + tierIndex * TitheFarmIds.TIER_SPAN;
+		return TitheFarmIds.PLOT_A_GROWN + tierOf(objectId) * TitheFarmIds.TIER_SPAN;
 	}
 }

@@ -42,8 +42,14 @@ enum NextAction
 	/** Refill watering cans at the barrel — not enough water for what comes next. */
 	REFILL_WATER("Refill"),
 
-	/** Put the carried fruit in the sack — between runs, or mid-run only when a harvest would not fit. */
+	/**
+	 * Put the carried fruit in the sack — between runs once 100 or more is carried (any amount on a last run), or
+	 * mid-run only when a harvest would not fit.
+	 */
 	DEPOSIT_FRUIT("Deposit"),
+
+	/** Drop or bank something — a plant is grown, the backpack is full, and there is no fruit to deposit. */
+	FREE_SLOT("Free slot"),
 
 	/** Collect seeds — an empty plot is waiting but the backpack has no seeds. */
 	GET_SEEDS("Seeds"),

@@ -41,6 +41,22 @@ public class ActionAdvisorTest
 	private static final int STAGE2_DRY = 27387;
 	private static final int STAGE2_WET = 27388;
 	private static final int GROWN = 27393;
+	private static final int GROWN_B = 27404;
+
+	/** Room to spare and a small haul of fruit. */
+	private static final Backpack WITH_FRUIT = new Backpack(27, 1, 12, 1, true);
+
+	/** Room to spare and a hundred fruit, a full sack's worth. */
+	private static final Backpack HUNDRED_FRUIT = new Backpack(27, 1, 100, 1, true);
+
+	/** No free slot, with a Golovanova (tier A) fruit stack. */
+	private static final Backpack FULL_WITH_A_STACK = new Backpack(0, 1, 12, 1, true);
+
+	/** No free slot, with a Bologano (tier B) fruit stack. */
+	private static final Backpack FULL_WITH_B_STACK = new Backpack(0, 1, 12, 1 << 1, true);
+
+	/** No free slot and no fruit. */
+	private static final Backpack FULL_NO_FRUIT = new Backpack(0, 0, 0, 0, true);
 
 	private static PlotInfo plot(int id)
 	{
@@ -64,7 +80,7 @@ public class ActionAdvisorTest
 
 	private static ActionAdvisor.Advice decide(List<PlotInfo> plots, int seeds, int water, int cropCount)
 	{
-		return ActionAdvisor.decide(plots, seeds, water, false, false, ActionAdvisor.plantSlots(plots, cropCount),
+		return ActionAdvisor.decide(plots, seeds, water, Backpack.ROOMY, ActionAdvisor.plantSlots(plots, cropCount),
 			false);
 	}
 
@@ -165,23 +181,60 @@ public class ActionAdvisorTest
 	@Test
 	public void depositsWhenBackpackIsFullAndAPlantIsGrown()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, true, true, 19, false);
+		Backpack full = new Backpack(0, 1, 1, 0, false);
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, full, 19, false);
 		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, advice);
+	}
+
+	@Test
+	public void harvestsIntoItsOwnStackWhenTheBackpackIsFull()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, FULL_WITH_A_STACK, 19, false);
+		assertAdvice(NextAction.HARVEST, 0, advice);
+	}
+
+	@Test
+	public void aStackOfAnotherTierLeavesNoRoom()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, FULL_WITH_B_STACK, 19, false);
+		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, advice);
+	}
+
+	@Test
+	public void harvestsTheGrownPlantWhoseFruitFits()
+	{
+		List<PlotInfo> run = plots(plot(GROWN), plot(GROWN_B));
+		assertAdvice(NextAction.HARVEST, 1, ActionAdvisor.decide(run, 0, 60, FULL_WITH_B_STACK, 18, false));
+	}
+
+	@Test
+	public void asksToFreeASlotWhenFullWithNoFruitToDeposit()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(GROWN)), 0, 60, FULL_NO_FRUIT, 19, false);
+		assertAdvice(NextAction.FREE_SLOT, -1, advice);
 	}
 
 	@Test
 	public void waitsInsteadOfDepositingMidRun()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(STAGE1_WET)), 0, 60, true, false, 19, false);
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(STAGE1_WET)), 0, 60, WITH_FRUIT, 19, false);
 		assertAdvice(NextAction.WAIT, -1, advice);
 	}
 
 	@Test
-	public void depositsBetweenRunsBeforeTheFirstSeed()
+	public void depositsAHundredFruitBetweenRunsBeforeTheFirstSeed()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 20, 60, true, false, 20,
-			false);
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 20, 60, HUNDRED_FRUIT,
+			20, false);
 		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, advice);
+	}
+
+	@Test
+	public void keepsASmallHaulAndPlantsBetweenRuns()
+	{
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 20, 60, WITH_FRUIT, 20,
+			false);
+		assertAdvice(NextAction.PLANT_SEED, 0, advice);
 	}
 
 	@Test
@@ -222,7 +275,7 @@ public class ActionAdvisorTest
 	@Test
 	public void lastRunNeverSendsYouForSeeds()
 	{
-		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(STAGE1_WET)), 0, 60, false, false,
+		ActionAdvisor.Advice advice = ActionAdvisor.decide(plots(plot(EMPTY), plot(STAGE1_WET)), 0, 60, Backpack.ROOMY,
 			5, true);
 		assertAdvice(NextAction.WAIT, -1, advice);
 	}
@@ -230,9 +283,9 @@ public class ActionAdvisorTest
 	@Test
 	public void lastRunSaysLeaveOnceEverythingIsInTheSack()
 	{
-		assertAdvice(NextAction.LEAVE, -1, ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 5, 60, false, false,
+		assertAdvice(NextAction.LEAVE, -1, ActionAdvisor.decide(plots(plot(EMPTY), plot(DEAD)), 5, 60, Backpack.ROOMY,
 			0, true));
-		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, ActionAdvisor.decide(plots(plot(EMPTY)), 0, 60, true, false,
+		assertAdvice(NextAction.DEPOSIT_FRUIT, -1, ActionAdvisor.decide(plots(plot(EMPTY)), 0, 60, WITH_FRUIT,
 			0, true));
 	}
 

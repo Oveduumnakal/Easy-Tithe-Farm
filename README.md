@@ -46,12 +46,14 @@ a seed you cannot finish watering.
   Plant is yellow, water is blue, harvest is green, clear dead is red, and deposit is gold-orange. When you
   plant, the seed in your backpack glows yellow with the plot; when you water, a filled watering can glows
   blue with it. Carrying 100 or more fruit, the fruit stack and both sacks glow gold-orange. Anything else,
-  like the sacks for a deposit under 100 fruit, is white. Each highlight outlines the whole plot, with no text
+  like the sacks when a full backpack needs emptying mid-run, is white. Each highlight outlines the whole plot, with no text
   drawn on it; only the plot to click now is also lightly filled, so it stands out from the ones after it.
   Inventory items are traced along their own outline. Every color can be changed in the Colors section.
 
-  Fruit is deposited between runs, like the water refill: once nothing is growing, the sacks light up before
-  the first seed goes in. The plugin never sends you to the sack mid-run unless a harvest would not fit.
+  Fruit is deposited in batches of 100, between runs like the water refill: once you carry 100 or more and
+  nothing is growing, the sacks light up before the first seed goes in. A smaller haul stays in your backpack
+  (on your last run, everything is deposited before you leave). Mid-run, the plugin only sends you to the sack,
+  and lights it, when a harvest would not fit; with no fruit to deposit, it asks you to free a slot instead.
 
 - **Glow**
 
