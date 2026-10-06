@@ -41,17 +41,20 @@ import java.util.function.Predicate;
  * A smaller haul stays in the backpack, and fruit is never deposited mid-run unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
  * otherwise plant it — or refill first when the water would not cover the rest of the run.</li>
- * <li>Water any other plant waiting for this stage's water, the one waiting longest first.</li>
- * <li>Harvest the first grown plant whose fruit fits in the backpack. When none fits, deposit to make room, or
- * free a slot when there is no fruit to deposit.</li>
+ * <li>Water any other plant waiting for this stage's water.</li>
+ * <li>Harvest a grown plant whose fruit fits in the backpack. When none fits, deposit to make room, or free a
+ * slot when there is no fruit to deposit.</li>
  * <li>Collect seeds when a plot is waiting and none are carried.</li>
  * <li>Otherwise wait.</li>
  * </ol>
  * Because planting outranks routine watering, a plant that ages into its next stage mid-pass no longer pulls
- * the player off the pass; it is only jumped to when its stage is nearly over. Plants age into each stage in
- * the order they were watered, so watering the one waiting longest walks the watering pass in the same order
- * rather than snapping back to the start of the route. Once any plant is grown, every grown plant is
- * harvested before the next seed goes in.
+ * the player off the pass; it is only jumped to when its stage is nearly over. Once any plant is grown, every
+ * grown plant is harvested before the next seed goes in.
+ *
+ * <p>Among the plants waiting for the same action — urgent watering, routine watering, or harvest — the one
+ * planted earliest goes first, so every pass retraces the planting pass even when the seeds went in out of
+ * route order. A plant whose planting was not seen was in before tracking began, so it counts as the earliest.
+ * Ties fall back to the plant that has sat longest in its current state, then to route order.
  */
 final class ActionAdvisor
 {
@@ -77,11 +80,11 @@ final class ActionAdvisor
 	 */
 	static Advice decide(List<PlotInfo> plots, int seeds, int water, Backpack backpack, int plantLimit)
 	{
-		int fresh = indexOf(plots, PlotInfo::isFreshSeed);
+		int fresh = earliestPlanted(plots, PlotInfo::isFreshSeed);
 		if (fresh >= 0)
 			return water(fresh, water);
 
-		int urgent = longestWaiting(plots, ActionAdvisor::isUrgent);
+		int urgent = earliestPlanted(plots, ActionAdvisor::isUrgent);
 		if (urgent >= 0)
 			return water(urgent, water);
 
@@ -101,13 +104,14 @@ final class ActionAdvisor
 			return new Advice(NextAction.REFILL_WATER, -1);
 		}
 
-		int unwatered = longestWaiting(plots, plot -> plot.getState() == TithePlotState.UNWATERED);
+		int unwatered = earliestPlanted(plots, plot -> plot.getState() == TithePlotState.UNWATERED);
 		if (unwatered >= 0)
 			return water(unwatered, water);
 
 		if (grown >= 0)
 		{
-			int fits = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN && backpack.fits(plot.getTier()));
+			int fits = earliestPlanted(plots,
+				plot -> plot.getState() == TithePlotState.GROWN && backpack.fits(plot.getTier()));
 			if (fits >= 0)
 				return new Advice(NextAction.HARVEST, fits);
 
@@ -174,29 +178,39 @@ final class ActionAdvisor
 	}
 
 	/**
-	 * The index of the accepted plot that has waited longest in its current state, the earliest in the list on a
-	 * tie, or {@code -1} when none is accepted. A plot of unknown age counts as the longest waiting, since it was
-	 * already there when tracking began.
+	 * The index of the accepted plot whose plant went in earliest, or {@code -1} when none is accepted. A plant
+	 * whose planting was not seen counts as the earliest, since it was already there when tracking began. Ties
+	 * go to the plot that has sat longest in its current state, an unknown age counting as the longest, then to
+	 * the earliest in the list.
 	 */
-	private static int longestWaiting(List<PlotInfo> plots, Predicate<PlotInfo> wanted)
+	private static int earliestPlanted(List<PlotInfo> plots, Predicate<PlotInfo> wanted)
 	{
 		int best = -1;
-		int bestAge = -1;
 		for (int i = 0; i < plots.size(); i++)
 		{
 			PlotInfo plot = plots.get(i);
-			if (!wanted.test(plot))
-				continue;
-
-			int age = plot.getAgeTicks() == PlotInfo.AGE_UNKNOWN ? Integer.MAX_VALUE : plot.getAgeTicks();
-			if (age > bestAge)
-			{
+			if (wanted.test(plot) && (best < 0 || plantedBefore(plot, plots.get(best))))
 				best = i;
-				bestAge = age;
-			}
 		}
 
 		return best;
+	}
+
+	/** Whether one plant went in strictly before another, by planting age and then by age in its current state. */
+	private static boolean plantedBefore(PlotInfo plot, PlotInfo other)
+	{
+		int planted = oldestIfUnknown(plot.getPlantAgeTicks());
+		int otherPlanted = oldestIfUnknown(other.getPlantAgeTicks());
+		if (planted != otherPlanted)
+			return planted > otherPlanted;
+
+		return oldestIfUnknown(plot.getAgeTicks()) > oldestIfUnknown(other.getAgeTicks());
+	}
+
+	/** An age in ticks, with {@link PlotInfo#AGE_UNKNOWN} read as older than any known age. */
+	private static int oldestIfUnknown(int ticks)
+	{
+		return ticks == PlotInfo.AGE_UNKNOWN ? Integer.MAX_VALUE : ticks;
 	}
 
 	/** The index of the first plot the predicate accepts, or {@code -1} when none does. */

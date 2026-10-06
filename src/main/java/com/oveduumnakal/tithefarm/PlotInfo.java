@@ -26,14 +26,14 @@ package com.oveduumnakal.tithefarm;
 
 /**
  * A client-free snapshot of one route plot: its decoded state, seed tier, growth stage, how many waters it still needs,
- * how long it has sat in its current object id, and how long it has been in its current growth stage. The two
- * ages differ only for a watered plant: watering changes the object id but not the stage clock, which runs from
- * the moment the plant entered the stage. {@link ActionAdvisor} and the water math work on lists of these so
- * they can be unit-tested without scene objects.
+ * how long it has sat in its current object id, how long it has been in its current growth stage, and how long ago
+ * its plant went in. The first two ages differ only for a watered plant: watering changes the object id but not
+ * the stage clock, which runs from the moment the plant entered the stage. {@link ActionAdvisor} and the water
+ * math work on lists of these so they can be unit-tested without scene objects.
  */
 final class PlotInfo
 {
-	/** Age reported when the plot's current id appeared before tracking began. */
+	/** Age reported when the plot's current id, or its plant, appeared before tracking began. */
 	static final int AGE_UNKNOWN = -1;
 
 	/** Tier reported when the plant's seed tier is not known, such as a predicted planting. */
@@ -45,9 +45,10 @@ final class PlotInfo
 	private final int watersRemaining;
 	private final int ageTicks;
 	private final int stageAgeTicks;
+	private final int plantAgeTicks;
 
 	private PlotInfo(TithePlotState state, int tier, int stage, int watersRemaining, int ageTicks,
-		int stageAgeTicks)
+		int stageAgeTicks, int plantAgeTicks)
 	{
 		this.state = state;
 		this.tier = tier;
@@ -55,6 +56,7 @@ final class PlotInfo
 		this.watersRemaining = watersRemaining;
 		this.ageTicks = ageTicks;
 		this.stageAgeTicks = stageAgeTicks;
+		this.plantAgeTicks = plantAgeTicks;
 	}
 
 	/**
@@ -70,7 +72,7 @@ final class PlotInfo
 	}
 
 	/**
-	 * Builds the snapshot for a plot from its current object id and both of its ages.
+	 * Builds the snapshot for a plot from its current object id and both of its ages, with its planting unseen.
 	 *
 	 * @param objectId      the plot's current object id
 	 * @param ageTicks      ticks since the plot changed to this id, or {@link #AGE_UNKNOWN}
@@ -79,8 +81,23 @@ final class PlotInfo
 	 */
 	static PlotInfo of(int objectId, int ageTicks, int stageAgeTicks)
 	{
+		return of(objectId, ageTicks, stageAgeTicks, AGE_UNKNOWN);
+	}
+
+	/**
+	 * Builds the snapshot for a plot from its current object id, both of its ages, and when its plant went in.
+	 *
+	 * @param objectId      the plot's current object id
+	 * @param ageTicks      ticks since the plot changed to this id, or {@link #AGE_UNKNOWN}
+	 * @param stageAgeTicks ticks since the plant entered its current growth stage, or {@link #AGE_UNKNOWN}
+	 * @param plantAgeTicks ticks since the plant was seeded, or {@link #AGE_UNKNOWN}
+	 * @return the plot snapshot
+	 */
+	static PlotInfo of(int objectId, int ageTicks, int stageAgeTicks, int plantAgeTicks)
+	{
 		return new PlotInfo(TithePlotState.fromObjectId(objectId), TithePlotState.tierOf(objectId),
-			TithePlotState.stageOf(objectId), TithePlotState.watersRemaining(objectId), ageTicks, stageAgeTicks);
+			TithePlotState.stageOf(objectId), TithePlotState.watersRemaining(objectId), ageTicks, stageAgeTicks,
+			plantAgeTicks);
 	}
 
 	/**
@@ -92,9 +109,11 @@ final class PlotInfo
 	 * @param stage         the growth stage 1 to 3, or 0 when the state has none
 	 * @param ageTicks      ticks in this state, or {@link #AGE_UNKNOWN}
 	 * @param stageAgeTicks ticks in this growth stage, or {@link #AGE_UNKNOWN}
+	 * @param plantAgeTicks ticks since the plant was seeded, or {@link #AGE_UNKNOWN}
 	 * @return the plot snapshot
 	 */
-	static PlotInfo predicted(TithePlotState state, int tier, int stage, int ageTicks, int stageAgeTicks)
+	static PlotInfo predicted(TithePlotState state, int tier, int stage, int ageTicks, int stageAgeTicks,
+		int plantAgeTicks)
 	{
 		int waters = 0;
 		if (state == TithePlotState.UNWATERED)
@@ -102,7 +121,7 @@ final class PlotInfo
 		else if (state == TithePlotState.WATERED)
 			waters = TitheFarmIds.WATERS_PER_CROP - stage;
 
-		return new PlotInfo(state, tier, stage, waters, ageTicks, stageAgeTicks);
+		return new PlotInfo(state, tier, stage, waters, ageTicks, stageAgeTicks, plantAgeTicks);
 	}
 
 	/** The decoded plot state. */
@@ -139,6 +158,12 @@ final class PlotInfo
 	int getStageAgeTicks()
 	{
 		return stageAgeTicks;
+	}
+
+	/** Ticks since the plant was seeded, or {@link #AGE_UNKNOWN} when it was not seen going in. */
+	int getPlantAgeTicks()
+	{
+		return plantAgeTicks;
 	}
 
 	/**

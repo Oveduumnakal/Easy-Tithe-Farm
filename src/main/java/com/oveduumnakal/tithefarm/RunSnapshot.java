@@ -79,7 +79,7 @@ final class RunSnapshot
 		this.trail = Collections.unmodifiableList(trail);
 	}
 
-	/** The run's state beyond its plots: wrap-up, sack, tools, energy. */
+	/** The run's state beyond its plots: sack, tools, energy, fruit carried. */
 	RunStatus getStatus()
 	{
 		return status;
