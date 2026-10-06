@@ -48,9 +48,6 @@ public interface TitheFarmConfig extends Config
 	/** Key of the record-route toggle, switched off by {@link RouteRecorder} when a recording completes. */
 	String RECORD_ROUTE = "recordRoute";
 
-	/** Key of the last-run toggle, switched off by the plugin when the player leaves the farm. */
-	String WRAP_UP = "wrapUp";
-
 	/** Key of the hidden saved route, encoded by {@link RouteRecorder#encode}. */
 	String RECORDED_ROUTE = "recordedRoute";
 
@@ -362,25 +359,11 @@ public interface TitheFarmConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = WRAP_UP,
-		name = "Last run",
-		description = "Wind the session down: plant only enough to bring the sack to the next 100 fruit (worth 2 "
-			+ "bonus points) if that fits, finish and deposit everything, then the plugin says leave. Turns itself "
-			+ "off when you leave the farm.",
-		section = runSection,
-		position = 1
-	)
-	default boolean wrapUp()
-	{
-		return false;
-	}
-
-	@ConfigItem(
 		keyName = "showSession",
 		name = "Show tonight's progress",
 		description = "Show points earned, experience gained, and time spent this session in the panel.",
 		section = runSection,
-		position = 2
+		position = 1
 	)
 	default boolean showSession()
 	{

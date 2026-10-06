@@ -43,8 +43,8 @@ enum NextAction
 	REFILL_WATER("Refill"),
 
 	/**
-	 * Put the carried fruit in the sack — between runs once 100 or more is carried (any amount on a last run), or
-	 * mid-run only when a harvest would not fit.
+	 * Put the carried fruit in the sack — between runs once 100 or more is carried, or mid-run only when a harvest
+	 * would not fit.
 	 */
 	DEPOSIT_FRUIT("Deposit"),
 
@@ -53,9 +53,6 @@ enum NextAction
 
 	/** Collect seeds — an empty plot is waiting but the backpack has no seeds. */
 	GET_SEEDS("Seeds"),
-
-	/** The last run is done — everything harvested and deposited — so leave through the farm door. */
-	LEAVE("Leave"),
 
 	/** Nothing to do this moment; plants are watered and still growing. */
 	WAIT("Wait");

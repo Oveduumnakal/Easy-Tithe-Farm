@@ -67,7 +67,7 @@ public class ActionForecastTest
 	public void plantingShowsTheNextFivePlots()
 	{
 		List<PlotInfo> plots = run(1, 6, STAGE1_WET);
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 14, 60, Backpack.ROOMY, 14, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 14, 60, Backpack.ROOMY, 14, 5);
 		assertTrail(trail,
 			NextAction.PLANT_SEED, 7, NextAction.PLANT_SEED, 8, NextAction.PLANT_SEED, 9,
 			NextAction.PLANT_SEED, 10, NextAction.PLANT_SEED, 11);
@@ -80,7 +80,7 @@ public class ActionForecastTest
 		for (int i = 0; i < 19; i++)
 			plots.set(i, PlotInfo.of(STAGE1_WET, 10, 95 - i * 5));
 
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 1, 60, Backpack.ROOMY, 1, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 1, 60, Backpack.ROOMY, 1, 5);
 		assertTrail(trail,
 			NextAction.PLANT_SEED, 20, NextAction.WATER_PLANT, 1, NextAction.WATER_PLANT, 2,
 			NextAction.WATER_PLANT, 3, NextAction.WATER_PLANT, 4);
@@ -94,7 +94,7 @@ public class ActionForecastTest
 			plots.set(i, PlotInfo.of(STAGE3_WET, 10, 97 - i * 3));
 
 		plots.set(19, PlotInfo.of(STAGE3_DRY, 40));
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 10, Backpack.ROOMY, 0, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 10, Backpack.ROOMY, 0, 5);
 		assertTrail(trail,
 			NextAction.WATER_PLANT, 20, NextAction.HARVEST, 1, NextAction.HARVEST, 2,
 			NextAction.HARVEST, 3, NextAction.HARVEST, 4);
@@ -105,7 +105,7 @@ public class ActionForecastTest
 	{
 		List<PlotInfo> plots = run(1, 13, STAGE1_WET);
 		plots.set(8, PlotInfo.of(DEAD, 10));
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 8, 60, Backpack.ROOMY, 8, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 8, 60, Backpack.ROOMY, 8, 5);
 		assertTrail(trail,
 			NextAction.CLEAR_DEAD, 9, NextAction.PLANT_SEED, 14, NextAction.PLANT_SEED, 15,
 			NextAction.PLANT_SEED, 16, NextAction.PLANT_SEED, 17);
@@ -115,7 +115,7 @@ public class ActionForecastTest
 	public void eachPlotAppearsOnce()
 	{
 		List<PlotInfo> plots = run(1, 1, FRESH);
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 5, 60, Backpack.ROOMY, 5, false, 3);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 5, 60, Backpack.ROOMY, 5, 3);
 		assertTrail(trail, NextAction.WATER_PLANT, 1, NextAction.PLANT_SEED, 2, NextAction.PLANT_SEED, 3);
 	}
 
@@ -123,7 +123,7 @@ public class ActionForecastTest
 	public void lengthOneIsJustTheCurrentAdvice()
 	{
 		List<PlotInfo> plots = run(1, 6, STAGE1_WET);
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 14, 60, Backpack.ROOMY, 14, false, 1);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 14, 60, Backpack.ROOMY, 14, 1);
 		assertTrail(trail, NextAction.PLANT_SEED, 7);
 	}
 
@@ -131,14 +131,14 @@ public class ActionForecastTest
 	public void nonPlotAdviceGivesNoTrail()
 	{
 		List<PlotInfo> plots = run(1, 1, FRESH);
-		assertTrue(ActionForecast.forecast(plots, 5, 0, Backpack.ROOMY, 5, false, 5).isEmpty());
+		assertTrue(ActionForecast.forecast(plots, 5, 0, Backpack.ROOMY, 5, 5).isEmpty());
 	}
 
 	@Test
 	public void stopsWhenSeedsRunOut()
 	{
 		List<PlotInfo> plots = run(1, 6, STAGE1_WET);
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 2, 60, Backpack.ROOMY, 14, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 2, 60, Backpack.ROOMY, 14, 5);
 		assertTrail(trail, NextAction.PLANT_SEED, 7, NextAction.PLANT_SEED, 8);
 	}
 
@@ -160,7 +160,7 @@ public class ActionForecastTest
 		plots.add(PlotInfo.of(GROWN, 10));
 		plots.add(PlotInfo.of(GROWN, 10));
 		Backpack oneSlotLeft = new Backpack(1, 1, 1, 0, false);
-		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 60, oneSlotLeft, 0, false, 5);
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 60, oneSlotLeft, 0, 5);
 		assertTrail(trail, NextAction.HARVEST, 1, NextAction.HARVEST, 2);
 	}
 
@@ -170,6 +170,6 @@ public class ActionForecastTest
 		List<PlotInfo> plots = new ArrayList<>();
 		plots.add(PlotInfo.of(GROWN, 10));
 		Backpack full = new Backpack(0, 0, 0, 0, true);
-		assertTrue(ActionForecast.forecast(plots, 0, 60, full, 0, false, 5).isEmpty());
+		assertTrue(ActionForecast.forecast(plots, 0, 60, full, 0, 5).isEmpty());
 	}
 }

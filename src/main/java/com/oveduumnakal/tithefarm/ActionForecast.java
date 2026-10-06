@@ -40,7 +40,7 @@ import java.util.Set;
  * next stage (or are grown after the third) once their stage reaches {@link TitheFarmIds#STAGE_TICKS}, and
  * unwatered plants that run out of time die. When the advisor would wait, the clock jumps to the next plant to
  * grow. The forecast stops at an action that is not tied to a plot and that it cannot model: refilling, fetching
- * seeds, freeing a slot, or leaving.
+ * seeds, or freeing a slot.
  *
  * <p>Each plot appears once, at its nearest action — "plant 7, then water 7" is one entry for plot 7. The first
  * entry is always exactly the advisor's current advice; later entries are predictions. Pure and static so it can
@@ -69,13 +69,12 @@ final class ActionForecast
 	 * @param water         the water charges carried
 	 * @param backpack      the fruit carried and the room left for a harvest
 	 * @param plantLimit    how many more seeds the run allows now
-	 * @param wrapUp        whether this is the last run
 	 * @param length        the most entries to return
 	 * @return up to {@code length} plot actions, each on a different plot; empty when the current advice is not a
 	 *     plot action
 	 */
 	static List<ActionAdvisor.Advice> forecast(List<PlotInfo> plots, int seeds, int water, Backpack backpack,
-		int plantLimit, boolean wrapUp, int length)
+		int plantLimit, int length)
 	{
 		List<PlotInfo> sim = new ArrayList<>(plots);
 		List<ActionAdvisor.Advice> trail = new ArrayList<>();
@@ -86,7 +85,7 @@ final class ActionForecast
 		Backpack pack = backpack;
 		for (int step = 0; step < MAX_STEPS && trail.size() < length; step++)
 		{
-			ActionAdvisor.Advice advice = ActionAdvisor.decide(sim, seedsLeft, waterLeft, pack, limit, wrapUp);
+			ActionAdvisor.Advice advice = ActionAdvisor.decide(sim, seedsLeft, waterLeft, pack, limit);
 			int index = advice.getPlotIndex();
 			NextAction action = advice.getAction();
 			if (index < 0)
@@ -126,9 +125,7 @@ final class ActionForecast
 				case HARVEST:
 					sim.set(index, PlotInfo.predicted(TithePlotState.EMPTY, PlotInfo.TIER_UNKNOWN, 0, 0, 0));
 					pack = pack.harvested(plot.getTier());
-					if (!wrapUp)
-						limit++;
-
+					limit++;
 					break;
 				default:
 					sim.set(index, PlotInfo.predicted(TithePlotState.EMPTY, PlotInfo.TIER_UNKNOWN, 0, 0, 0));

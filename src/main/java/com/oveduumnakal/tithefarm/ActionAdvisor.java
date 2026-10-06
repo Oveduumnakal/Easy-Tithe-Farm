@@ -37,16 +37,15 @@ import java.util.function.Predicate;
  * <ol>
  * <li>Water a seed planted moments ago, so every seed is watered as it goes in.</li>
  * <li>Water any plant close to the end of its stage, the only thing that can still kill it.</li>
- * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried,
- * or any fruit at all on a last run. A smaller haul stays in the backpack, and fruit is never deposited mid-run
- * unless a harvest would not fit.</li>
+ * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried.
+ * A smaller haul stays in the backpack, and fruit is never deposited mid-run unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
  * otherwise plant it — or refill first when the water would not cover the rest of the run.</li>
  * <li>Water any other plant waiting for this stage's water, the one waiting longest first.</li>
  * <li>Harvest the first grown plant whose fruit fits in the backpack. When none fits, deposit to make room, or
  * free a slot when there is no fruit to deposit.</li>
  * <li>Collect seeds when a plot is waiting and none are carried.</li>
- * <li>Otherwise wait — or, on a last run with nothing left in the ground, leave.</li>
+ * <li>Otherwise wait.</li>
  * </ol>
  * Because planting outranks routine watering, a plant that ages into its next stage mid-pass no longer pulls
  * the player off the pass; it is only jumped to when its stage is nearly over. Plants age into each stage in
@@ -74,11 +73,9 @@ final class ActionAdvisor
 	 * @param water         the water charges carried
 	 * @param backpack      the fruit carried and the room left for a harvest
 	 * @param plantLimit    how many more seeds the run allows now; no seed is suggested at zero
-	 * @param wrapUp        whether this is the last run: no seed fetching, and "leave" once everything is in
 	 * @return the chosen action and the route index it targets ({@code -1} for non-plot actions)
 	 */
-	static Advice decide(List<PlotInfo> plots, int seeds, int water, Backpack backpack, int plantLimit,
-		boolean wrapUp)
+	static Advice decide(List<PlotInfo> plots, int seeds, int water, Backpack backpack, int plantLimit)
 	{
 		int fresh = indexOf(plots, PlotInfo::isFreshSeed);
 		if (fresh >= 0)
@@ -88,8 +85,7 @@ final class ActionAdvisor
 		if (urgent >= 0)
 			return water(urgent, water);
 
-		boolean depositDue = wrapUp ? backpack.hasFruit() : backpack.getFruit() >= BONUS_BATCH;
-		if (depositDue && RunSnapshot.nothingGrowing(plots))
+		if (backpack.getFruit() >= BONUS_BATCH && RunSnapshot.nothingGrowing(plots))
 			return new Advice(NextAction.DEPOSIT_FRUIT, -1);
 
 		int grown = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN);
@@ -119,11 +115,8 @@ final class ActionAdvisor
 		}
 
 		boolean emptyPlot = indexOf(plots, plot -> plot.getState() == TithePlotState.EMPTY) >= 0;
-		if (emptyPlot && seeds == 0 && plantLimit > 0 && !wrapUp)
+		if (emptyPlot && seeds == 0 && plantLimit > 0)
 			return new Advice(NextAction.GET_SEEDS, -1);
-
-		if (wrapUp && indexOf(plots, plot -> !plot.needsSeed()) < 0)
-			return new Advice(NextAction.LEAVE, -1);
 
 		return new Advice(NextAction.WAIT, -1);
 	}
@@ -163,23 +156,6 @@ final class ActionAdvisor
 		}
 
 		return Math.max(0, cropCount - planted);
-	}
-
-	/**
-	 * How many seeds a last run should still plant: exactly enough to bring the fruit deposited this game up to
-	 * the next hundred — worth 2 bonus points — when that fits in the run, otherwise none.
-	 *
-	 * @param deposited the fruit deposited this game
-	 * @param carried   the fruit in the backpack
-	 * @param planted   the plants in the ground that will still yield fruit
-	 * @param slots     the seeds the crop count still has room for
-	 * @return the seeds to plant before finishing
-	 */
-	static int wrapUpSeeds(int deposited, int carried, int planted, int slots)
-	{
-		int total = Math.max(0, deposited) + Math.max(0, carried) + Math.max(0, planted);
-		int toHundred = (BONUS_BATCH - total % BONUS_BATCH) % BONUS_BATCH;
-		return toHundred <= slots ? toHundred : 0;
 	}
 
 	/** Water the given plot, or refill first when no water is left. */

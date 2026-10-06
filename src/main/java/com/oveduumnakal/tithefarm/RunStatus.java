@@ -28,18 +28,15 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The run's state beyond its plots, carried on a {@link RunSnapshot}: whether this is the last run and how many
- * seeds it still allows, the fruit deposited this game, missing tools, run energy, the fruit carried and the
- * experience it would earn once deposited, and whether every watering can is full.
+ * The run's state beyond its plots, carried on a {@link RunSnapshot}: the fruit deposited this game, missing
+ * tools, run energy, the fruit carried and the experience it would earn once deposited, and whether every
+ * watering can is full.
  */
 final class RunStatus
 {
-	/** A neutral status: not wrapping up, nothing missing, full energy, no fruit, full cans. */
-	static final RunStatus NEUTRAL = new RunStatus(false, Integer.MAX_VALUE, 0, Collections.emptyList(), false, 100,
-		0, 0, true);
+	/** A neutral status: nothing missing, full energy, no fruit, full cans. */
+	static final RunStatus NEUTRAL = new RunStatus(0, Collections.emptyList(), false, 100, 0, 0, true);
 
-	private final boolean wrapUp;
-	private final int plantLimit;
 	private final int deposited;
 	private final List<String> missingTools;
 	private final boolean fertiliser;
@@ -51,8 +48,6 @@ final class RunStatus
 	/**
 	 * Creates a status.
 	 *
-	 * @param wrapUp        whether this is the last run
-	 * @param plantLimit    how many more seeds the run allows now
 	 * @param deposited     the fruit deposited this game
 	 * @param missingTools  the names of required tools not in the backpack
 	 * @param fertiliser    whether Gricoller's fertiliser is in the backpack
@@ -61,11 +56,9 @@ final class RunStatus
 	 * @param pendingXp     the experience depositing the carried fruit would earn
 	 * @param cansFull      whether every watering can carried is full
 	 */
-	RunStatus(boolean wrapUp, int plantLimit, int deposited, List<String> missingTools, boolean fertiliser,
-		int energyPercent, int carried, int pendingXp, boolean cansFull)
+	RunStatus(int deposited, List<String> missingTools, boolean fertiliser, int energyPercent, int carried,
+		int pendingXp, boolean cansFull)
 	{
-		this.wrapUp = wrapUp;
-		this.plantLimit = plantLimit;
 		this.deposited = deposited;
 		this.missingTools = Collections.unmodifiableList(missingTools);
 		this.fertiliser = fertiliser;
@@ -73,18 +66,6 @@ final class RunStatus
 		this.carried = carried;
 		this.pendingXp = pendingXp;
 		this.cansFull = cansFull;
-	}
-
-	/** Whether this is the last run. */
-	boolean isWrapUp()
-	{
-		return wrapUp;
-	}
-
-	/** How many more seeds the run allows now. */
-	int getPlantLimit()
-	{
-		return plantLimit;
 	}
 
 	/** The fruit deposited this game. */

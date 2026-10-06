@@ -51,9 +51,9 @@ a seed you cannot finish watering.
   Inventory items are traced along their own outline. Every color can be changed in the Colors section.
 
   Fruit is deposited in batches of 100, between runs like the water refill: once you carry 100 or more and
-  nothing is growing, the sacks light up before the first seed goes in. A smaller haul stays in your backpack
-  (on your last run, everything is deposited before you leave). Mid-run, the plugin only sends you to the sack,
-  and lights it, when a harvest would not fit; with no fruit to deposit, it asks you to free a slot instead.
+  nothing is growing, the sacks light up before the first seed goes in. A smaller haul stays in your backpack.
+  Mid-run, the plugin only sends you to the sack, and lights it, when a harvest would not fit; with no fruit to
+  deposit, it asks you to free a slot instead.
 
 - **Glow**
 
@@ -70,12 +70,6 @@ a seed you cannot finish watering.
 
   A countdown sits over every plant waiting for water, turning yellow, then red, as it gets close — and an
   optional notification fires before one dies, for when life pulls you away mid-run.
-
-- **Last run**
-
-  Flip it on when you are ready to stop. The plugin plants just enough to bring the sack to the next 100 fruit
-  (2 bonus points) if that fits, walks you through the final harvest and deposit, then tells you to leave.
-  It switches itself off when you do.
 
 - **Tonight's progress**
 
