@@ -97,7 +97,7 @@ final class ActionAdvisor
 			return water(fresh, water);
 
 		int urgent = earliestPlanted(plots, ActionAdvisor::isUrgent);
-		if (urgent >= 0 && urgentAtRisk(plots, seedsAhead(plots, seeds, plantLimit)))
+		if (urgent >= 0 && urgentAtRisk(plots, seedsAhead(plots, seeds, plantLimit), water))
 			return water(urgent, water);
 
 		if (backpack.getFruit() >= BONUS_BATCH && RunSnapshot.nothingGrowing(plots))
@@ -195,20 +195,26 @@ final class ActionAdvisor
 	/**
 	 * Whether some urgent plant would die before the pass reaches it: the seeds still to plant (each planted and
 	 * watered) and the plants watered ahead of it, at {@link #PASS_STEP_TICKS} each, leave it less than
-	 * {@link #URGENT_MARGIN_TICKS} to spare.
+	 * {@link #URGENT_MARGIN_TICKS} to spare, or the water carried runs out before it — a refill trip the estimate
+	 * cannot time.
 	 *
 	 * @param plots      the plots of the run
 	 * @param seedsAhead the seeds that will be planted before routine watering resumes
+	 * @param water      the water charges carried
 	 * @return true when an urgent plant must be watered now
 	 */
-	private static boolean urgentAtRisk(List<PlotInfo> plots, int seedsAhead)
+	private static boolean urgentAtRisk(List<PlotInfo> plots, int seedsAhead, int water)
 	{
 		for (PlotInfo plot : plots)
 		{
 			if (!isUrgent(plot))
 				continue;
 
-			int steps = 2 * seedsAhead + wateredAhead(plots, plot) + 1;
+			int watersAhead = seedsAhead + wateredAhead(plots, plot);
+			if (water <= watersAhead)
+				return true;
+
+			int steps = seedsAhead + watersAhead + 1;
 			if (steps * PASS_STEP_TICKS + URGENT_MARGIN_TICKS >= plot.ticksUntilDeath())
 				return true;
 		}
