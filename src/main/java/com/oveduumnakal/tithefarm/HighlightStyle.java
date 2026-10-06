@@ -29,6 +29,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.Stroke;
+import java.awt.geom.Area;
 
 /**
  * The strength math behind the highlights: how much each step of the trail fades, how the glow pulses, and how a
@@ -103,20 +104,22 @@ final class HighlightStyle
 	 */
 	static void draw(Graphics2D graphics, Shape shape, Color color, double strength)
 	{
-		draw(graphics, shape, color, strength, true);
+		draw(graphics, shape, null, color, strength, true);
 	}
 
 	/**
 	 * Borders a shape in the color at the given strength, and fills it with a light tint of the color when asked.
-	 * The trail fills only the current target, so it stands apart from the plots after it.
+	 * The trail fills only the current target, so it stands apart from the plots after it. Where a hidden shape
+	 * covers it, neither the fill nor the border is drawn, so a plant's model stays clear of its patch's highlight.
 	 *
 	 * @param graphics the graphics to draw on
 	 * @param shape    the shape, or {@code null}
+	 * @param hidden   the part to leave undrawn, or {@code null} to draw it all
 	 * @param color    the base color
 	 * @param strength the strength 0 to 1
 	 * @param fill     whether to tint the inside as well as draw the border
 	 */
-	static void draw(Graphics2D graphics, Shape shape, Color color, double strength, boolean fill)
+	static void draw(Graphics2D graphics, Shape shape, Shape hidden, Color color, double strength, boolean fill)
 	{
 		Color edge = scale(color, strength);
 		if (shape == null || edge.getAlpha() == 0)
@@ -125,12 +128,36 @@ final class HighlightStyle
 		if (fill)
 		{
 			graphics.setColor(scale(edge, FILL_SHARE));
-			graphics.fill(shape);
+			graphics.fill(without(shape, hidden));
 		}
 
 		graphics.setColor(edge);
-		graphics.setStroke(BORDER);
-		graphics.draw(shape);
+		if (hidden == null)
+		{
+			graphics.setStroke(BORDER);
+			graphics.draw(shape);
+		}
+		else
+		{
+			graphics.fill(without(BORDER.createStrokedShape(shape), hidden));
+		}
+	}
+
+	/**
+	 * A shape with another cut out of it.
+	 *
+	 * @param shape  the shape
+	 * @param hidden the part to cut out, or {@code null} to keep the shape whole
+	 * @return the shape itself when nothing is cut, else what is left of it
+	 */
+	static Shape without(Shape shape, Shape hidden)
+	{
+		if (hidden == null)
+			return shape;
+
+		Area area = new Area(shape);
+		area.subtract(new Area(hidden));
+		return area;
 	}
 
 	/**

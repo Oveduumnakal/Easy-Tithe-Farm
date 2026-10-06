@@ -125,8 +125,9 @@ class TitheHighlightOverlay extends Overlay
 
 	/**
 	 * Draws the current plot and the predicted ones after it, fading step by step, each in its action's color. The
-	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape. Only the current
-	 * plot is filled; the ones after it are outlines. Step markers are drawn on top unless turned off.
+	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape, but the highlight
+	 * stops at the plant's model so the plant stays visible above it. Only the current plot is filled; the ones
+	 * after it are outlines. Step markers are drawn on top unless turned off.
 	 */
 	private void highlightTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
 	{
@@ -140,12 +141,21 @@ class TitheHighlightOverlay extends Overlay
 				continue;
 
 			double strength = HighlightStyle.fade(step) * glow;
-			HighlightStyle.draw(graphics, plot.getCanvasTilePoly(), color, strength, step == 0);
+			HighlightStyle.draw(graphics, plot.getCanvasTilePoly(), plantModel(plot), color, strength, step == 0);
 		}
 
 		StepMarker marker = config.stepMarkers();
 		if (marker != StepMarker.OFF)
 			markTrail(graphics, snapshot, marker, glow);
+	}
+
+	/**
+	 * The on-screen outline of the plant growing on a plot, which its highlight is cut around, or {@code null} for
+	 * an empty plot, whose highlight covers the whole patch.
+	 */
+	private static Shape plantModel(GameObject plot)
+	{
+		return plot.getId() == TitheFarmIds.PLOT_EMPTY ? null : plot.getConvexHull();
 	}
 
 	/**
