@@ -46,8 +46,9 @@ import net.runelite.client.ui.overlay.components.TextComponent;
  * The reward goal box: the first ticked reward's icon, centered beside the goal's name, progress, and runs left;
  * a points bar against the combined cost; and a warning when the goal is over the points cap. The points the
  * carried fruit would earn once deposited show as a {@code (+n)} after the progress and the points, and as a
- * second color in the bar after the points already banked. Drawn at the farm
- * and its lobby whenever a reward is ticked, in the top-left corner under the run panel.
+ * second color in the bar after the points already banked. Runs left counts that fruit as deposited, and reads
+ * {@code deposit} when depositing it is all the goal still needs. Drawn at the farm and its lobby whenever a
+ * reward is ticked, in the top-left corner under the run panel.
  *
  * <p>Laid out by hand in one pass rather than with nested overlay components, so the box appears at its full
  * size on the first frame instead of growing into it, and labels sit right beside their values.
@@ -164,8 +165,8 @@ class RewardGoalOverlay extends Overlay
 		lines.add(new Line("Progress:", progress, goal.isAffordable() ? Color.GREEN : Color.WHITE));
 		if (config.showRunsLeft())
 		{
-			int runs = goal.getRunsLeft();
-			lines.add(new Line("Runs left:", runs == 0 ? "ready!" : "~" + runs, runs == 0 ? Color.GREEN : Color.WHITE));
+			Color color = goal.isAffordable() ? Color.GREEN : Color.WHITE;
+			lines.add(new Line("Runs left:", runsLeft(goal), goal.needsDeposit() ? BAR_PENDING : color));
 		}
 
 		return lines;
@@ -231,6 +232,24 @@ class RewardGoalOverlay extends Overlay
 	static String percent(double progress)
 	{
 		return String.format("%.1f%%", Math.floor(progress * 1000) / 10);
+	}
+
+	/**
+	 * The runs-left value: {@code ready!} once the spendable points cover the goal, {@code deposit} when only the
+	 * carried fruit's points are missing, otherwise the runs still needed with the carried fruit counted.
+	 *
+	 * @param goal the goal
+	 * @return the text, e.g. {@code ~12}
+	 */
+	static String runsLeft(Goal goal)
+	{
+		if (goal.isAffordable())
+			return "ready!";
+
+		if (goal.needsDeposit())
+			return "deposit";
+
+		return "~" + goal.getRunsLeft();
 	}
 
 	/** One text line: a white label and, a small gap after it, a value in its own color. */
