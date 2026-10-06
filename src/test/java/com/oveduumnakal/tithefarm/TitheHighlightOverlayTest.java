@@ -28,9 +28,23 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
 
-/** Verifies where the step markers sit on a trail plot. */
+/** Verifies where the step markers sit on a trail plot, and which model vertices are the plant. */
 public class TitheHighlightOverlayTest
 {
+	@Test
+	public void onlyVerticesAboveTheSoilAreThePlant()
+	{
+		float[] heights = {0, -4, -8, -9, -80, -347};
+		assertArrayEquals(new int[]{3, 4, 5}, TitheHighlightOverlay.plantVertices(heights, heights.length));
+	}
+
+	@Test
+	public void aBarePatchHasNoPlantVertices()
+	{
+		float[] heights = {0, 0, 0, 0, -4};
+		assertArrayEquals(new int[0], TitheHighlightOverlay.plantVertices(heights, heights.length));
+	}
+
 	@Test
 	public void northEastTileIsOneTileUpAndRightOfAPlotsCentre()
 	{

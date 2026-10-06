@@ -28,6 +28,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Shape;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -35,9 +36,12 @@ import javax.inject.Inject;
 
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
+import net.runelite.api.Model;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
+import net.runelite.api.Renderable;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.model.Jarvis;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -55,6 +59,12 @@ import net.runelite.client.ui.overlay.OverlayPosition;
  */
 class TitheHighlightOverlay extends Overlay
 {
+	/**
+	 * Height in model units below which a plot's model is soil: the patch's dry soil lies at 0 and its wet soil at
+	 * 4, while even a seedling stands 80 high (read from the game cache).
+	 */
+	static final int SOIL_HEIGHT = 8;
+
 	private final Client client;
 	private final TitheFarmConfig config;
 	private final TithePlotTracker plotTracker;
@@ -151,11 +161,67 @@ class TitheHighlightOverlay extends Overlay
 
 	/**
 	 * The on-screen outline of the plant growing on a plot, which its highlight is cut around, or {@code null} for
-	 * an empty plot, whose highlight covers the whole patch.
+	 * an empty plot, whose highlight covers the whole patch. A planted plot's model also carries the patch's soil,
+	 * flat across all nine tiles, so only the vertices standing above the soil are hulled (see
+	 * {@link #plantVertices}).
 	 */
-	private static Shape plantModel(GameObject plot)
+	private Shape plantModel(GameObject plot)
 	{
-		return plot.getId() == TitheFarmIds.PLOT_EMPTY ? null : plot.getConvexHull();
+		if (plot.getId() == TitheFarmIds.PLOT_EMPTY)
+			return null;
+
+		Renderable renderable = plot.getRenderable();
+		Model model = renderable instanceof Model ? (Model) renderable : null;
+		if (model == null && renderable != null)
+			model = renderable.getModel();
+
+		if (model == null)
+			return null;
+
+		float[] heights = model.getVerticesY();
+		int[] plant = plantVertices(heights, model.getVerticesCount());
+		if (plant.length == 0)
+			return null;
+
+		float[] east = pick(model.getVerticesX(), plant);
+		float[] north = pick(model.getVerticesZ(), plant);
+		float[] up = pick(heights, plant);
+		int[] canvasX = new int[plant.length];
+		int[] canvasY = new int[plant.length];
+		Perspective.modelToCanvas(client, plot.getWorldView(), plant.length, plot.getX(), plot.getY(), plot.getZ(),
+			plot.getModelOrientation(), east, north, up, canvasX, canvasY);
+		return Jarvis.convexHull(canvasX, canvasY);
+	}
+
+	/**
+	 * The vertices of a plot's model that belong to the plant: those more than {@link #SOIL_HEIGHT} above the
+	 * patch. Model heights grow downwards, so higher vertices have lower values.
+	 *
+	 * @param heights the model's vertex heights
+	 * @param count   how many vertices the model has
+	 * @return the indexes of the plant's vertices
+	 */
+	static int[] plantVertices(float[] heights, int count)
+	{
+		int[] plant = new int[count];
+		int found = 0;
+		for (int i = 0; i < count; i++)
+		{
+			if (heights[i] < -SOIL_HEIGHT)
+				plant[found++] = i;
+		}
+
+		return Arrays.copyOf(plant, found);
+	}
+
+	/** The values at the given indexes. */
+	private static float[] pick(float[] values, int[] indexes)
+	{
+		float[] picked = new float[indexes.length];
+		for (int i = 0; i < indexes.length; i++)
+			picked[i] = values[indexes[i]];
+
+		return picked;
 	}
 
 	/**
