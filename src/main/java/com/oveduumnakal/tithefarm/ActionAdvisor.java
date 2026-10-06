@@ -55,7 +55,10 @@ import java.util.function.Predicate;
  * <p>Among the plants waiting for the same action — urgent watering, routine watering, or harvest — the one
  * planted earliest goes first, so every pass retraces the planting pass even when the seeds went in out of
  * route order. A plant whose planting was not seen was in before tracking began, so it counts as the earliest.
- * Ties fall back to the plant that has sat longest in its current state, then to route order.
+ * Ties fall back to the plant that has sat longest in its current state, then to route order. Routine watering
+ * first finishes the pass under way: a plant still owed an earlier stage's water comes before one that has
+ * already moved on to its next stage, so the first plants reaching their next stage do not pull the player back
+ * to the start of the route mid-pass.
  */
 final class ActionAdvisor
 {
@@ -94,7 +97,7 @@ final class ActionAdvisor
 
 		int grown = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN);
 		int open = indexOf(plots, PlotInfo::needsSeed);
-		int unwatered = earliestPlanted(plots, plot -> plot.getState() == TithePlotState.UNWATERED);
+		int unwatered = nextInPass(plots);
 		if (grown < 0 && open >= 0 && seeds > 0 && plantLimit > 0)
 		{
 			if (plots.get(open).getState() == TithePlotState.DEAD)
@@ -179,6 +182,24 @@ final class ActionAdvisor
 	private static boolean isUrgent(PlotInfo plot)
 	{
 		return plot.getState() == TithePlotState.UNWATERED && plot.getAgeTicks() >= URGENT_TICKS;
+	}
+
+	/**
+	 * The index of the unwatered plant next in the watering pass under way, or {@code -1} when none is waiting:
+	 * the lowest growth stage first, since those plants are still owed the current pass's water, then the one
+	 * planted earliest.
+	 */
+	private static int nextInPass(List<PlotInfo> plots)
+	{
+		int lowest = Integer.MAX_VALUE;
+		for (PlotInfo plot : plots)
+		{
+			if (plot.getState() == TithePlotState.UNWATERED)
+				lowest = Math.min(lowest, plot.getStage());
+		}
+
+		int stage = lowest;
+		return earliestPlanted(plots, plot -> plot.getState() == TithePlotState.UNWATERED && plot.getStage() == stage);
 	}
 
 	/**

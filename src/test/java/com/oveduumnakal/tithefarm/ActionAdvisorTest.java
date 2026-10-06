@@ -40,6 +40,7 @@ public class ActionAdvisorTest
 	private static final int DEAD = 27386;
 	private static final int STAGE2_DRY = 27387;
 	private static final int STAGE2_WET = 27388;
+	private static final int STAGE3_DRY = 27390;
 	private static final int GROWN = 27393;
 	private static final int GROWN_B = 27404;
 
@@ -141,6 +142,22 @@ public class ActionAdvisorTest
 		List<PlotInfo> run = plots(planted(STAGE2_DRY, 30, 200), planted(STAGE2_DRY, 10, 260),
 			planted(STAGE2_DRY, 20, 230));
 		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 60));
+	}
+
+	@Test
+	public void finishesThePassUnderWayBeforeStartingTheNext()
+	{
+		List<PlotInfo> run = plots(planted(STAGE3_DRY, 40, 200), planted(STAGE3_DRY, 30, 196),
+			planted(STAGE2_DRY, 35, 130), planted(STAGE2_DRY, 25, 126));
+		assertAdvice(NextAction.WATER_PLANT, 2, decide(run, 0, 60));
+	}
+
+	@Test
+	public void urgentWateringStillBeatsThePassUnderWay()
+	{
+		List<PlotInfo> run = plots(planted(STAGE3_DRY, ActionAdvisor.URGENT_TICKS, 200),
+			planted(STAGE2_DRY, 35, 130));
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 0, 60));
 	}
 
 	@Test
