@@ -51,11 +51,13 @@ import net.runelite.api.gameval.InventoryID;
 /**
  * Builds one {@link RunSnapshot} of the current run from the tracked plots, the backpack, and the config.
  *
- * <p>The route adapts to how the player plants. It starts as the selected route; planting its next plot changes
- * nothing, but planting anywhere else re-plans it: the plants already in keep the order they went in, and the
- * rest of the run is planned with {@link RoutePlanner} as the shortest walk from the newest plant back to the
- * oldest, over real walking distances from {@link PlotGraph}. The adapted order then stays put through harvest
- * and replant rounds until the player strays again, the scene reloads, or the route settings change.
+ * <p>The route adapts to how the player plants. It starts as the selected route; planting any of its plots changes
+ * nothing, even out of order, so a skipped plot stays next and the player doubles back to it rather than the
+ * pattern being redrawn. Planting a plot off the route re-plans it: the plants already in keep the order they
+ * went in, and the rest of the run is planned with {@link RoutePlanner} as the shortest walk from the newest
+ * plant back to the oldest, over real walking distances from {@link PlotGraph}. The adapted order then stays put
+ * through harvest and replant rounds until the player strays again, the scene reloads, or the route settings
+ * change.
  *
  * <p>The snapshot's plots are the route, in order, followed by every planted plot off the route, oldest plant
  * first — so a plant the player put somewhere else is still watered, harvested, and counted in the water need.
@@ -82,7 +84,7 @@ class TitheRun
 	private int cachedCycle = -1;
 
 	private List<int[]> adapted;
-	private WorldPoint expectedNext;
+	private Set<WorldPoint> routeTiles = Collections.emptySet();
 	private List<WorldPoint> graphTiles;
 	private int[][] graph;
 
@@ -147,19 +149,16 @@ class TitheRun
 		}
 
 		Set<WorldPoint> onRoute = new HashSet<>();
-		expectedNext = null;
 		for (int[] point : PlantRoute.order(points, preferred, count))
 		{
 			WorldPoint tile = tiles.get(PlantRoute.key(point));
 			GameObject plot = tracker.getPlotsByTile().get(tile);
-			PlotInfo info = tracker.infoOf(tile, plot, tick);
-			if (expectedNext == null && info.needsSeed())
-				expectedNext = tile;
-
 			onRoute.add(tile);
 			route.add(plot);
-			plots.add(info);
+			plots.add(tracker.infoOf(tile, plot, tick));
 		}
+
+		routeTiles = onRoute;
 
 		int routeLength = route.size();
 		List<WorldPoint> offRoute = new ArrayList<>();
@@ -231,14 +230,15 @@ class TitheRun
 	}
 
 	/**
-	 * Re-plans the route when a seed went somewhere other than the route's next plot. Call after the tracker has
-	 * recorded the planting, on the client thread.
+	 * Re-plans the route when a seed went on a plot off the route. A seed on a route plot, even out of order, keeps
+	 * the route, so the next plant is the earliest route plot still empty. Call after the tracker has recorded the
+	 * planting, on the client thread.
 	 *
 	 * @param tile the template tile of the plot just planted
 	 */
 	void onPlanted(WorldPoint tile)
 	{
-		if (recorder.isRecording() || tile.equals(expectedNext))
+		if (recorder.isRecording() || routeTiles.contains(tile))
 			return;
 
 		List<WorldPoint> committed = new ArrayList<>();
@@ -296,7 +296,7 @@ class TitheRun
 	void reset()
 	{
 		adapted = null;
-		expectedNext = null;
+		routeTiles = Collections.emptySet();
 		graph = null;
 		graphTiles = null;
 		cached = null;
