@@ -40,7 +40,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Verifies the about-to-die notification fires once per plant stage and respects its setting. */
+/** Verifies the about-to-die notification fires once each time a plant enters the window and respects its setting. */
 public class DeathWarnerTest
 {
 	private static final int STAGE2_DRY = 27387;
@@ -94,6 +94,18 @@ public class DeathWarnerTest
 		plantAged(90, 2L);
 		warner.onTick();
 		verify(notifier, times(2)).notify(anyString());
+	}
+
+	@Test
+	public void notifiesAgainWhenTheSamePlantReentersTheWindow()
+	{
+		plantAged(90, 1L);
+		warner.onTick();
+		plantAged(10, 1L);
+		warner.onTick();
+		plantAged(90, 1L);
+		warner.onTick();
+		verify(notifier, times(2)).notify(contains("dies in 6s"));
 	}
 
 	@Test

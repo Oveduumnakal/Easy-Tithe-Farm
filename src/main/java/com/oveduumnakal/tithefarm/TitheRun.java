@@ -299,7 +299,7 @@ class TitheRun
 
 		adapted = order;
 		cached = null;
-		log.info("{} replan after off-route plant at {}: kept {}, planned {} -> {}", TitheLayoutLogger.TAG, tile,
+		log.debug("{} replan after off-route plant at {}: kept {}, planned {} -> {}", TitheLayoutLogger.TAG, tile,
 			committed.size(), order.size() - committed.size(), RouteRecorder.encode(order));
 	}
 
