@@ -24,18 +24,28 @@
  */
 package com.oveduumnakal.tithefarm;
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertArrayEquals;
-
-/** Verifies where the step markers sit on a trail plot. */
-public class TitheHighlightOverlayTest
+/** How each highlighted trail plot shows its place in the order, on its north-east tile. */
+public enum StepMarker
 {
-	@Test
-	public void northEastTileIsOneTileUpAndRightOfAPlotsCentre()
+	/** The step number, 1 to 5. */
+	NUMBERS("Numbers"),
+
+	/** One small dot per step: one for the current plot, up to five for the last. */
+	BLIPS("Blips"),
+
+	/** No marker. */
+	OFF("Off");
+
+	private final String name;
+
+	StepMarker(String name)
 	{
-		assertArrayEquals(new int[]{128, 128}, TitheHighlightOverlay.northEastOffset(3, 3));
-		assertArrayEquals(new int[]{0, 0}, TitheHighlightOverlay.northEastOffset(1, 1));
-		assertArrayEquals(new int[]{64, 128}, TitheHighlightOverlay.northEastOffset(2, 3));
+		this.name = name;
+	}
+
+	@Override
+	public String toString()
+	{
+		return name;
 	}
 }

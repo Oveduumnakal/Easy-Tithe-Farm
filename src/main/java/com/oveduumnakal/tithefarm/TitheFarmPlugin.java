@@ -73,6 +73,9 @@ public class TitheFarmPlugin extends Plugin
 	private TitheFarmConfig config;
 
 	@Inject
+	private ConfigManager configManager;
+
+	@Inject
 	private TithePlotTracker tracker;
 
 	@Inject
@@ -130,6 +133,7 @@ public class TitheFarmPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		migrateStepNumbers();
 		overlayManager.add(waterOverlay);
 		overlayManager.add(highlightOverlay);
 		overlayManager.add(inventoryOverlay);
@@ -140,6 +144,24 @@ public class TitheFarmPlugin extends Plugin
 		session.reset();
 		goals.reset();
 		clientThread.invokeLater(this::restoreScene);
+	}
+
+	/**
+	 * Carries the old step-numbers checkbox over to the step-marker dropdown: a player who unchecked it gets
+	 * {@link StepMarker#OFF}, everyone else keeps the default {@link StepMarker#NUMBERS}. A marker already chosen
+	 * is left alone. The old key is then removed, so this does nothing on later start-ups.
+	 */
+	private void migrateStepNumbers()
+	{
+		String legacy = configManager.getConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.LEGACY_STEP_NUMBERS);
+		if (legacy == null)
+			return;
+
+		String marker = configManager.getConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.STEP_MARKERS);
+		if (marker == null && !Boolean.parseBoolean(legacy))
+			configManager.setConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.STEP_MARKERS, StepMarker.OFF);
+
+		configManager.unsetConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.LEGACY_STEP_NUMBERS);
 	}
 
 	@Override

@@ -28,12 +28,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Shape;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javax.inject.Inject;
 
 import net.runelite.api.Client;
@@ -129,7 +126,7 @@ class TitheHighlightOverlay extends Overlay
 	/**
 	 * Draws the current plot and the predicted ones after it, fading step by step, each in its action's color. The
 	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape. Only the current
-	 * plot is filled; the ones after it are outlines. Step numbers are written on top when enabled.
+	 * plot is filled; the ones after it are outlines. Step markers are drawn on top unless turned off.
 	 */
 	private void highlightTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
 	{
@@ -146,30 +143,27 @@ class TitheHighlightOverlay extends Overlay
 			HighlightStyle.draw(graphics, plot.getCanvasTilePoly(), color, strength, step == 0);
 		}
 
-		if (config.showStepNumbers())
-			numberTrail(graphics, snapshot, glow);
+		StepMarker marker = config.stepMarkers();
+		if (marker != StepMarker.OFF)
+			markTrail(graphics, snapshot, marker, glow);
 	}
 
 	/**
-	 * Writes each trail plot's step numbers on its north-east tile, in the color and strength of that plot's
-	 * brightest outline, so the numbers glow and fade with the border. Drawn after every outline, last step
-	 * first, so the current plot's number is on top.
+	 * Marks each trail plot's step on its north-east tile, as a number or as that many blips, in the color and
+	 * strength of the plot's outline, so the marker glows and fades with the border. Drawn after every outline,
+	 * last step first, so the current plot's marker is on top. The forecast puts each plot in the trail once, so
+	 * markers never share a tile.
 	 */
-	private void numberTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
+	private void markTrail(Graphics2D graphics, RunSnapshot snapshot, StepMarker marker, double glow)
 	{
 		List<ActionAdvisor.Advice> trail = snapshot.getTrail();
-		List<Integer> plotIndexes = new ArrayList<>();
-		for (ActionAdvisor.Advice advice : trail)
-			plotIndexes.add(advice.getPlotIndex());
-
-		String[] labels = stepLabels(plotIndexes);
 		graphics.setFont(FontManager.getRunescapeSmallFont());
 		for (int step = trail.size() - 1; step >= 0; step--)
 		{
 			ActionAdvisor.Advice advice = trail.get(step);
 			GameObject plot = snapshot.plotAt(advice.getPlotIndex());
 			Color color = colorOf(advice.getAction());
-			if (labels[step] == null || plot == null || color == null)
+			if (plot == null || color == null)
 				continue;
 
 			LocalPoint centre = plot.getLocalLocation();
@@ -178,37 +172,22 @@ class TitheHighlightOverlay extends Overlay
 
 			int[] offset = northEastOffset(plot.sizeX(), plot.sizeY());
 			LocalPoint corner = centre.plus(offset[0], offset[1]);
-			Point location = Perspective.getCanvasTextLocation(client, graphics, corner, labels[step], 0);
-			if (location != null)
+			double strength = HighlightStyle.fade(step) * glow;
+			if (marker == StepMarker.BLIPS)
 			{
-				HighlightStyle.drawText(graphics, labels[step], location.getX(), location.getY(), color,
-					HighlightStyle.fade(step) * glow);
+				Point location = Perspective.localToCanvas(client, corner,
+					client.getTopLevelWorldView().getPlane());
+				if (location != null)
+					HighlightStyle.drawBlips(graphics, step + 1, location.getX(), location.getY(), color, strength);
+			}
+			else
+			{
+				String label = String.valueOf(step + 1);
+				Point location = Perspective.getCanvasTextLocation(client, graphics, corner, label, 0);
+				if (location != null)
+					HighlightStyle.drawText(graphics, label, location.getX(), location.getY(), color, strength);
 			}
 		}
-	}
-
-	/**
-	 * The step-number text for each step of a trail, e.g. {@code 1} or {@code 1,2}. A plot that appears more than
-	 * once gets all its numbers on its first step, and {@code null} on the later ones, so the numbers are never
-	 * drawn over each other.
-	 *
-	 * @param plotIndexes the route index of each step's plot, current step first
-	 * @return the text per step, or {@code null} for a step whose numbers are written on an earlier step
-	 */
-	static String[] stepLabels(List<Integer> plotIndexes)
-	{
-		String[] labels = new String[plotIndexes.size()];
-		Map<Integer, Integer> firstStep = new HashMap<>();
-		for (int step = 0; step < plotIndexes.size(); step++)
-		{
-			Integer first = firstStep.putIfAbsent(plotIndexes.get(step), step);
-			if (first == null)
-				labels[step] = String.valueOf(step + 1);
-			else
-				labels[first] += "," + (step + 1);
-		}
-
-		return labels;
 	}
 
 	/**

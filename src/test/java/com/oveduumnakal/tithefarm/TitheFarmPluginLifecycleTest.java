@@ -44,6 +44,7 @@ import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.overlay.OverlayManager;
 
@@ -52,6 +53,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -61,8 +63,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * Drives the plugin's lifecycle with mocked collaborators and a queued client thread: config changes wait for
- * the client thread (#10), start-up re-reads a farm that is already loaded (#11), and an account switch restarts
- * the session (#18).
+ * the client thread (#10), start-up re-reads a farm that is already loaded (#11), an account switch restarts
+ * the session (#18), and start-up carries the old step-numbers box over to the step-marker dropdown (#58).
  */
 public class TitheFarmPluginLifecycleTest
 {
@@ -79,6 +81,9 @@ public class TitheFarmPluginLifecycleTest
 
 	@Mock
 	private TitheFarmConfig config;
+
+	@Mock
+	private ConfigManager configManager;
 
 	@Spy
 	private TithePlotTracker tracker = new TithePlotTracker();
@@ -210,6 +215,48 @@ public class TitheFarmPluginLifecycleTest
 		event.setKey(key);
 		event.setNewValue(value);
 		return event;
+	}
+
+	/** Stores a raw config value as {@link ConfigManager} would hand it back. */
+	private void stored(String key, String value)
+	{
+		when(configManager.getConfiguration(TitheFarmConfig.GROUP, key)).thenReturn(value);
+	}
+
+	@Test
+	public void anUncheckedStepNumbersBoxBecomesOff()
+	{
+		stored(TitheFarmConfig.LEGACY_STEP_NUMBERS, "false");
+		plugin.startUp();
+		verify(configManager).setConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.STEP_MARKERS, StepMarker.OFF);
+		verify(configManager).unsetConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.LEGACY_STEP_NUMBERS);
+	}
+
+	@Test
+	public void aCheckedStepNumbersBoxKeepsTheNumbersDefault()
+	{
+		stored(TitheFarmConfig.LEGACY_STEP_NUMBERS, "true");
+		plugin.startUp();
+		verify(configManager, never()).setConfiguration(anyString(), anyString(), any(StepMarker.class));
+		verify(configManager).unsetConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.LEGACY_STEP_NUMBERS);
+	}
+
+	@Test
+	public void aChosenStepMarkerIsNotOverwritten()
+	{
+		stored(TitheFarmConfig.LEGACY_STEP_NUMBERS, "false");
+		stored(TitheFarmConfig.STEP_MARKERS, StepMarker.BLIPS.name());
+		plugin.startUp();
+		verify(configManager, never()).setConfiguration(anyString(), anyString(), any(StepMarker.class));
+		verify(configManager).unsetConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.LEGACY_STEP_NUMBERS);
+	}
+
+	@Test
+	public void withoutTheOldBoxNothingIsMigrated()
+	{
+		plugin.startUp();
+		verify(configManager, never()).setConfiguration(anyString(), anyString(), any(StepMarker.class));
+		verify(configManager, never()).unsetConfiguration(anyString(), anyString());
 	}
 
 	@Test

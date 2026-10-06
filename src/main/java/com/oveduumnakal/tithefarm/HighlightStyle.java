@@ -42,6 +42,12 @@ final class HighlightStyle
 	/** Share of the border's strength the fill gets, so the shape reads as tinted rather than painted over. */
 	static final double FILL_SHARE = 0.25;
 
+	/** Diameter in pixels of one step-marker blip. */
+	static final int BLIP_SIZE = 4;
+
+	/** Pixels between neighbouring blips. */
+	static final int BLIP_GAP = 2;
+
 	/** The border every highlight is drawn with. */
 	private static final Stroke BORDER = new BasicStroke(2f);
 
@@ -148,6 +154,52 @@ final class HighlightStyle
 		graphics.drawString(text, x + 1, y + 1);
 		graphics.setColor(face);
 		graphics.drawString(text, x, y);
+	}
+
+	/**
+	 * Draws a centred row of small dots in the color at the given strength, each over a thin dark shadow that
+	 * fades with it, like {@link #drawText}. Draws nothing for a strength that leaves the color fully transparent.
+	 *
+	 * @param graphics the graphics to draw on
+	 * @param count    how many dots
+	 * @param centreX  the x the row is centred on
+	 * @param centreY  the y the row is centred on
+	 * @param color    the base color
+	 * @param strength the strength 0 to 1
+	 */
+	static void drawBlips(Graphics2D graphics, int count, int centreX, int centreY, Color color, double strength)
+	{
+		Color face = scale(color, strength);
+		if (face.getAlpha() == 0)
+			return;
+
+		int top = centreY - BLIP_SIZE / 2;
+		Color shadow = new Color(0, 0, 0, face.getAlpha());
+		for (int left : blipLefts(count, centreX))
+		{
+			graphics.setColor(shadow);
+			graphics.fillOval(left + 1, top + 1, BLIP_SIZE, BLIP_SIZE);
+			graphics.setColor(face);
+			graphics.fillOval(left, top, BLIP_SIZE, BLIP_SIZE);
+		}
+	}
+
+	/**
+	 * The left edge of each dot in a row of blips centred on an x.
+	 *
+	 * @param count   how many dots
+	 * @param centreX the x the row is centred on
+	 * @return the left x of each dot, left to right; empty for no dots
+	 */
+	static int[] blipLefts(int count, int centreX)
+	{
+		int[] lefts = new int[Math.max(0, count)];
+		int width = lefts.length * BLIP_SIZE + Math.max(0, lefts.length - 1) * BLIP_GAP;
+		int first = centreX - width / 2;
+		for (int i = 0; i < lefts.length; i++)
+			lefts[i] = first + i * (BLIP_SIZE + BLIP_GAP);
+
+		return lefts;
 	}
 
 	/**
