@@ -52,8 +52,8 @@ final class ActionForecast
 	/** How many plots the trail shows: the current target and the next four. */
 	static final int TRAIL_LENGTH = 5;
 
-	/** Ticks one predicted action is assumed to take, walking included. */
-	static final int ACTION_TICKS = 3;
+	/** Ticks one predicted action is assumed to take, walking included: the advisor's own step time. */
+	static final int ACTION_TICKS = ActionAdvisor.PASS_STEP_TICKS;
 
 	/** Upper bound on simulated actions, so a forecast always ends. */
 	private static final int MAX_STEPS = 60;
