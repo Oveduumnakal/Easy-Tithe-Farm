@@ -193,23 +193,22 @@ public interface TitheFarmConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "notifyOnRefill",
+		keyName = "notifyWhenLow",
 		name = "Notify when low",
-		description = "Fire a RuneLite notification when your water drops below what the run still needs.",
+		description = "Fires once when your water drops below what the run still needs.",
 		section = waterSection,
 		position = 1
 	)
-	default boolean notifyOnRefill()
+	default Notification notifyWhenLow()
 	{
-		return false;
+		return Notification.ON;
 	}
 
 	@ConfigItem(
 		keyName = "blockPlantWhenShort",
-		name = "Guard planting when low",
-		description = "When your water would not finish the whole run (what your planted crops still need plus "
-			+ "3 for every seed still to plant), move \"Cancel\" to the top of the menu so a stray click cannot "
-			+ "plant. Never removes options.",
+		name = "Prevent planting (low water)",
+		description = "Move \"Cancel\" to the top of the plant menu when your water would not finish the run: what "
+			+ "your planted crops still need plus 3 for every seed still to plant. Never removes options.",
 		section = waterSection,
 		position = 2
 	)
@@ -411,7 +410,7 @@ public interface TitheFarmConfig extends Config
 	)
 	default boolean barehandedPlanting()
 	{
-		return true;
+		return false;
 	}
 
 	@Range(max = 100)
