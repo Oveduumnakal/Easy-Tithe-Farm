@@ -168,7 +168,30 @@ public class TitheRunTest
 	}
 
 	@Test
-	public void plantingOffRouteReplansAroundThePlayer()
+	public void anOffRoutePlantMidRunTakesTheNextPlotsPlaceAndKeepsTheShape()
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			run.snapshot();
+			plant(TitheRoutes.BASIC_20.get(i));
+		}
+
+		run.snapshot();
+		int[] southWest = {1811, 3489};
+		plant(southWest);
+		RunSnapshot snapshot = run.snapshot();
+		assertEquals(20, snapshot.getRouteLength());
+		for (int i = 0; i < 20; i++)
+		{
+			int[] expected = i < 5 ? TitheRoutes.BASIC_20.get(i) : i == 5 ? southWest : TitheRoutes.BASIC_20.get(i - 1);
+			int[] tile = tileOf(snapshot.getRoute().get(i));
+			assertEquals(expected[0], tile[0]);
+			assertEquals(expected[1], tile[1]);
+		}
+	}
+
+	@Test
+	public void plantingOffRouteFirstTakesTheFirstPlotsPlace()
 	{
 		run.snapshot();
 		int[] southWest = {1811, 3489};

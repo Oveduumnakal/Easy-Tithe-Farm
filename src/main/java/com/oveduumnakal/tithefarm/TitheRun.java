@@ -39,12 +39,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.runelite.api.Client;
-import net.runelite.api.CollisionData;
 import net.runelite.api.GameObject;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
-import net.runelite.api.Point;
-import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.InventoryID;
 
@@ -53,11 +50,10 @@ import net.runelite.api.gameval.InventoryID;
  *
  * <p>The route adapts to how the player plants. It starts as the selected route; planting any of its plots changes
  * nothing, even out of order, so a skipped plot stays next and the player doubles back to it rather than the
- * pattern being redrawn. Planting a plot off the route re-plans it: the plants already in keep the order they
- * went in, and the rest of the run is planned with {@link RoutePlanner} as the shortest walk from the newest
- * plant back to the oldest, over real walking distances from {@link PlotGraph}. The adapted order then stays put
- * through harvest and replant rounds until the player strays again, the scene reloads, or the route settings
- * change.
+ * pattern being redrawn. Planting a plot off the route keeps the shape too: the new plant takes the place of the
+ * route's next empty plot, and the route's last empty plot drops out so the crop count holds. The adapted order
+ * then stays put through harvest and replant rounds until the player strays again, the scene reloads, or the
+ * route settings change.
  *
  * <p>The snapshot's plots are the route, in order, followed by every planted plot off the route, oldest plant
  * first — so a plant the player put somewhere else is still watered, harvested, and counted in the water need.
@@ -84,9 +80,7 @@ class TitheRun
 	private int cachedCycle = -1;
 
 	private List<int[]> adapted;
-	private Set<WorldPoint> routeTiles = Collections.emptySet();
-	private List<WorldPoint> graphTiles;
-	private int[][] graph;
+	private List<WorldPoint> routeOrder = Collections.emptyList();
 
 	@Inject
 	TitheRun(Client client, TitheFarmConfig config, TithePlotTracker tracker, RouteRecorder recorder)
@@ -148,17 +142,18 @@ class TitheRun
 			}
 		}
 
-		Set<WorldPoint> onRoute = new HashSet<>();
+		List<WorldPoint> routeTiles = new ArrayList<>();
 		for (int[] point : PlantRoute.order(points, preferred, count))
 		{
 			WorldPoint tile = tiles.get(PlantRoute.key(point));
 			GameObject plot = tracker.getPlotsByTile().get(tile);
-			onRoute.add(tile);
+			routeTiles.add(tile);
 			route.add(plot);
 			plots.add(tracker.infoOf(tile, plot, tick));
 		}
 
-		routeTiles = onRoute;
+		routeOrder = routeTiles;
+		Set<WorldPoint> onRoute = new HashSet<>(routeTiles);
 
 		int routeLength = route.size();
 		List<WorldPoint> offRoute = new ArrayList<>();
@@ -230,128 +225,63 @@ class TitheRun
 	}
 
 	/**
-	 * Re-plans the route when a seed went on a plot off the route. A seed on a route plot, even out of order, keeps
-	 * the route, so the next plant is the earliest route plot still empty. Call after the tracker has recorded the
-	 * planting, on the client thread.
+	 * Adapts the route when a seed went on a plot off the route, keeping its shape: the new plant takes the place
+	 * of the route's next empty plot in the order, and the route's last empty plot drops out so the crop count
+	 * holds. A seed on a route plot, even out of order, keeps the route, so the next plant is the earliest route
+	 * plot still empty. Call after the tracker has recorded the planting, on the client thread.
 	 *
 	 * @param tile the template tile of the plot just planted
 	 */
 	void onPlanted(WorldPoint tile)
 	{
-		if (recorder.isRecording() || routeTiles.contains(tile))
+		if (recorder.isRecording() || routeOrder.isEmpty() || routeOrder.contains(tile))
 			return;
 
-		List<WorldPoint> committed = new ArrayList<>();
-		List<WorldPoint> empty = new ArrayList<>();
-		for (Map.Entry<WorldPoint, GameObject> entry : tracker.getPlotsByTile().entrySet())
+		List<WorldPoint> order = new ArrayList<>(routeOrder);
+		int next = -1;
+		int last = -1;
+		for (int i = 0; i < order.size(); i++)
 		{
-			TithePlotState state = TithePlotState.fromObjectId(entry.getValue().getId());
-			if (state == TithePlotState.EMPTY)
-				empty.add(entry.getKey());
-			else if (state != TithePlotState.DEAD)
-				committed.add(entry.getKey());
+			if (needsSeed(order.get(i)))
+			{
+				if (next < 0)
+					next = i;
+
+				last = i;
+			}
 		}
 
-		committed.sort(Comparator.comparingInt(tracker::plantedTick)
-			.thenComparingInt(WorldPoint::getX)
-			.thenComparingInt(WorldPoint::getY));
-		if (committed.isEmpty())
-			return;
+		if (last >= 0)
+			order.remove(last);
 
-		ensureGraph();
-		Map<WorldPoint, Integer> index = new HashMap<>();
-		for (int i = 0; i < graphTiles.size(); i++)
-			index.put(graphTiles.get(i), i);
+		order.add(next >= 0 ? next : order.size(), tile);
+		List<int[]> points = new ArrayList<>();
+		for (WorldPoint plot : order)
+			points.add(new int[]{plot.getX(), plot.getY()});
 
-		List<Integer> candidates = new ArrayList<>();
-		for (WorldPoint plot : empty)
-		{
-			if (index.containsKey(plot))
-				candidates.add(index.get(plot));
-		}
-
-		Integer last = index.get(committed.get(committed.size() - 1));
-		Integer first = index.get(committed.get(0));
-		if (last == null || first == null)
-			return;
-
-		int remaining = config.cropCount() - committed.size();
-		List<int[]> order = new ArrayList<>();
-		for (WorldPoint plot : committed)
-			order.add(new int[]{plot.getX(), plot.getY()});
-
-		for (int planned : RoutePlanner.plan(graph, last, first, candidates, remaining))
-			order.add(new int[]{graphTiles.get(planned).getX(), graphTiles.get(planned).getY()});
-
-		adapted = order;
+		adapted = points;
 		cached = null;
-		log.debug("{} replan after off-route plant at {}: kept {}, planned {} -> {}", TitheLayoutLogger.TAG, tile,
-			committed.size(), order.size() - committed.size(), RouteRecorder.encode(order));
+		log.debug("{} off-route plant at {} took route place {} -> {}", TitheLayoutLogger.TAG, tile,
+			next >= 0 ? next + 1 : order.size(), RouteRecorder.encode(points));
 	}
 
-	/**
-	 * Forgets the adapted route and the distance graph, for a scene reload or a route-settings change. Call only
-	 * on the client thread: {@link #onPlanted} reads the graph straight after building it.
-	 */
+	/** Forgets the adapted route, for a scene reload or a route-settings change. Call only on the client thread. */
 	void reset()
 	{
 		adapted = null;
-		routeTiles = Collections.emptySet();
-		graph = null;
-		graphTiles = null;
+		routeOrder = Collections.emptyList();
 		cached = null;
 	}
 
-	/** Builds the plot cost graph once per scene, from collision flags when they are available. */
-	private void ensureGraph()
+	/** Whether a tracked plot still needs a seed: empty, or dead and waiting to be cleared. */
+	private boolean needsSeed(WorldPoint tile)
 	{
-		Map<WorldPoint, GameObject> plots = tracker.getPlotsByTile();
-		if (graph != null && graphTiles.size() == plots.size())
-			return;
+		GameObject plot = tracker.getPlotsByTile().get(tile);
+		if (plot == null)
+			return false;
 
-		graphTiles = new ArrayList<>(plots.keySet());
-		WorldView view = client.getTopLevelWorldView();
-		CollisionData[] maps = view == null ? null : view.getCollisionMaps();
-		if (maps == null || maps[view.getPlane()] == null)
-		{
-			graph = RoutePlanner.shapedCosts(chebyshev(graphTiles), centers(graphTiles));
-			return;
-		}
-
-		int[][] footprints = new int[graphTiles.size()][];
-		for (int i = 0; i < graphTiles.size(); i++)
-		{
-			GameObject plot = plots.get(graphTiles.get(i));
-			Point min = plot.getSceneMinLocation();
-			Point max = plot.getSceneMaxLocation();
-			footprints[i] = new int[]{min.getX(), min.getY(), max.getX(), max.getY()};
-		}
-
-		graph = RoutePlanner.shapedCosts(PlotGraph.distances(maps[view.getPlane()].getFlags(), footprints),
-			centers(graphTiles));
-	}
-
-	/** Plot centre tiles as {@code {x, y}}. */
-	private static List<int[]> centers(List<WorldPoint> tiles)
-	{
-		List<int[]> centers = new ArrayList<>();
-		for (WorldPoint tile : tiles)
-			centers.add(new int[]{tile.getX(), tile.getY()});
-
-		return centers;
-	}
-
-	/** Straight-line tile distances between plots, the fallback when no collision map is loaded. */
-	private static int[][] chebyshev(List<WorldPoint> tiles)
-	{
-		int[][] distance = new int[tiles.size()][tiles.size()];
-		for (int i = 0; i < tiles.size(); i++)
-		{
-			for (int j = 0; j < tiles.size(); j++)
-				distance[i][j] = tiles.get(i).distanceTo2D(tiles.get(j));
-		}
-
-		return distance;
+		TithePlotState state = TithePlotState.fromObjectId(plot.getId());
+		return state == TithePlotState.EMPTY || state == TithePlotState.DEAD;
 	}
 
 	/** The item ids of the equipment worn, empty when the equipment is not loaded. */
