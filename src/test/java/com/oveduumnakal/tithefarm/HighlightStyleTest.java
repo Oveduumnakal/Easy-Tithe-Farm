@@ -26,6 +26,8 @@ package com.oveduumnakal.tithefarm;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.image.BufferedImage;
 
 import org.junit.Test;
@@ -33,9 +35,13 @@ import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-/** Checks the trail fade, the glow pulse, color scaling, and the step markers: number text and blips. */
+/**
+ * Checks the trail fade, the glow pulse, color scaling, the plant cut out of a patch highlight, and the step
+ * markers: number text and blips.
+ */
 public class HighlightStyleTest
 {
 	private static final double EPSILON = 1e-9;
@@ -86,6 +92,36 @@ public class HighlightStyleTest
 		assertTrue(contains(image, Color.BLACK.getRGB()));
 		assertTrue(visible(image));
 		assertFalse(visible(textImage(color, 0)));
+	}
+
+	@Test
+	public void nothingHiddenKeepsTheShapeWhole()
+	{
+		Shape patch = new Rectangle(0, 0, 20, 20);
+		assertSame(patch, HighlightStyle.without(patch, null));
+	}
+
+	@Test
+	public void theHiddenPartIsCutOutOfTheShape()
+	{
+		Shape left = HighlightStyle.without(new Rectangle(0, 0, 20, 20), new Rectangle(5, 5, 10, 10));
+		assertTrue(left.contains(2, 2));
+		assertFalse(left.contains(10, 10));
+	}
+
+	@Test
+	public void aPlantCoversItsPatchsFillAndBorder()
+	{
+		Color color = new Color(46, 219, 90);
+		BufferedImage image = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D graphics = image.createGraphics();
+		HighlightStyle.draw(graphics, new Rectangle(2, 2, 20, 20), new Rectangle(14, 0, 10, 24), color, 1, true);
+		graphics.dispose();
+
+		assertEquals(color.getRGB(), image.getRGB(2, 12));
+		assertTrue((image.getRGB(6, 12) >>> 24) != 0);
+		assertEquals(0, image.getRGB(22, 12) >>> 24);
+		assertEquals(0, image.getRGB(18, 12) >>> 24);
 	}
 
 	@Test
