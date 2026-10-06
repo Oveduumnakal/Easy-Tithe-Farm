@@ -283,7 +283,11 @@ public class TitheFarmPlugin extends Plugin
 		GameState state = event.getGameState();
 		if (state == GameState.LOADING || state == GameState.HOPPING || state == GameState.LOGIN_SCREEN)
 		{
-			tracker.clear();
+			if (state == GameState.LOADING)
+				tracker.clearObjects();
+			else
+				tracker.clear();
+
 			waterReminder.reset();
 			run.reset();
 			deathWarner.reset();

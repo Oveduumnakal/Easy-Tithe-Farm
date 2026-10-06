@@ -127,6 +127,13 @@ public class ActionAdvisorTest
 	}
 
 	@Test
+	public void aPlantOfUnknownAgeIsWateredBeforeTheNextSeed()
+	{
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, PlotInfo.AGE_UNKNOWN), plot(STAGE1_WET), plot(EMPTY));
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 18, 60));
+	}
+
+	@Test
 	public void anUrgentPlantTheRunReachesInTimeWaitsForTheLastSeed()
 	{
 		List<PlotInfo> run = plots(aged(STAGE2_DRY, ActionAdvisor.URGENT_TICKS), plot(STAGE1_WET), plot(EMPTY));
