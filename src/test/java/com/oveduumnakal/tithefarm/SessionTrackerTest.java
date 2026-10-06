@@ -49,48 +49,40 @@ public class SessionTrackerTest
 		plots = mock(TithePlotTracker.class);
 		when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
 		when(plots.inTitheFarm()).thenReturn(true);
-		state(100, 0, 50_000);
+		state(100, 50_000);
 		session = new SessionTracker(client, plots);
 	}
 
-	private void state(int points, int score, int xp)
+	private void state(int points, int xp)
 	{
 		when(client.getVarbitValue(TitheFarmIds.POINTS_VARBIT)).thenReturn(points);
-		when(client.getVarbitValue(TitheFarmIds.SCORE_VARBIT)).thenReturn(score);
 		when(client.getSkillExperience(Skill.FARMING)).thenReturn(xp);
 	}
 
 	@Test
-	public void countsPointsExperienceAndTimeFromTheFirstTick()
+	public void countsExperienceAndTimeFromTheFirstTick()
 	{
 		session.onTick();
-		state(118, 54, 62_300);
+		state(118, 62_300);
 		session.onTick();
-		assertEquals(18, session.pointsTonight());
+		assertEquals(118, session.points());
 		assertEquals(12_300, session.xpTonight());
-		assertEquals(54, session.fruitTonight());
 		assertEquals(2, session.ticksInFarm());
 	}
 
 	@Test
-	public void keepsTonightsFruitWhenTheGameScoreResets()
+	public void resetStartsAFreshSessionOnTheNextTick()
 	{
 		session.onTick();
-		state(118, 60, 50_000);
+		state(100, 62_300);
 		session.onTick();
-		state(118, 0, 50_000);
+		session.reset();
+		assertEquals(0, session.xpTonight());
+		assertEquals(0, session.ticksInFarm());
 		session.onTick();
-		state(125, 20, 50_000);
-		session.onTick();
-		assertEquals(80, session.fruitTonight());
-	}
-
-	@Test
-	public void spendingPointsDoesNotGoNegative()
-	{
-		session.onTick();
-		state(25, 0, 50_000);
-		assertEquals(0, session.pointsTonight());
+		state(100, 63_000);
+		assertEquals(700, session.xpTonight());
+		assertEquals(1, session.ticksInFarm());
 	}
 
 	@Test

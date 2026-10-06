@@ -77,7 +77,7 @@ public class TitheMenuSwapperGuardTest
 	private void affordable(boolean canAfford)
 	{
 		RunSnapshot snapshot = new RunSnapshot(TestRuns.listOf(TestRuns.plot(27383, 1L)), 1,
-			TestRuns.listOf(PlotInfo.of(27383, 0)), 2, 20, 60, canAfford,
+			TestRuns.listOf(PlotInfo.of(27383, 0)), 2, 60, canAfford,
 			new ActionAdvisor.Advice(NextAction.REFILL_WATER, -1), false, 0, RunStatus.NEUTRAL,
 			Collections.emptyList());
 		when(run.snapshot()).thenReturn(snapshot);

@@ -32,13 +32,12 @@ import net.runelite.api.GameState;
 import net.runelite.api.Skill;
 
 /**
- * fruit deposited, and time spent in the farm. The reward goal is tracked separately by {@link GoalTracker}.
- * fruit deposited, and time spent in the farm, plus how many runs remain to the chosen reward.
+ * Tracks this session's Farming experience and time spent in the farm, and reads the spendable points, for the
+ * run panel. The reward goal is tracked separately by {@link GoalTracker}.
  *
  * <p>The session starts at the first logged-in tick after the plugin starts, and restarts if the plugin is
- * restarted. Fruit deposited is summed from rises in the game's score, so the reset when leaving the farm does
- * not lose tonight's count. Time only accrues while the player is in the farm. The arithmetic is static so it can
- * be unit-tested.
+ * restarted or {@link #reset()} is called. Time only accrues while the player is in the farm.
+ * {@link #compactXp(int)} is static so it can be unit-tested.
  */
 @Singleton
 class SessionTracker
@@ -47,10 +46,7 @@ class SessionTracker
 	private final TithePlotTracker plotTracker;
 
 	private boolean started;
-	private int startPoints;
 	private int startXp;
-	private int lastScore;
-	private int fruitTonight;
 	private int ticksInFarm;
 
 	@Inject
@@ -60,25 +56,18 @@ class SessionTracker
 		this.plotTracker = plotTracker;
 	}
 
-	/** Records the session baseline on its first tick, then accrues fruit and time each tick. */
+	/** Records the experience baseline on its first tick, then accrues time in the farm each tick. */
 	void onTick()
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		int score = client.getVarbitValue(TitheFarmIds.SCORE_VARBIT);
 		if (!started)
 		{
 			started = true;
-			startPoints = points();
 			startXp = client.getSkillExperience(Skill.FARMING);
-			lastScore = score;
 		}
 
-		if (score > lastScore)
-			fruitTonight += score - lastScore;
-
-		lastScore = score;
 		if (plotTracker.inTitheFarm())
 			ticksInFarm++;
 	}
@@ -87,7 +76,6 @@ class SessionTracker
 	void reset()
 	{
 		started = false;
-		fruitTonight = 0;
 		ticksInFarm = 0;
 	}
 
@@ -97,22 +85,10 @@ class SessionTracker
 		return client.getVarbitValue(TitheFarmIds.POINTS_VARBIT);
 	}
 
-	/** Points earned this session, never negative (spending points does not count against it). */
-	int pointsTonight()
-	{
-		return started ? Math.max(0, points() - startPoints) : 0;
-	}
-
 	/** Farming experience gained this session. */
 	int xpTonight()
 	{
 		return started ? Math.max(0, client.getSkillExperience(Skill.FARMING) - startXp) : 0;
-	}
-
-	/** Fruit deposited this session, across games. */
-	int fruitTonight()
-	{
-		return fruitTonight;
 	}
 
 	/** Ticks spent in the farm this session. */

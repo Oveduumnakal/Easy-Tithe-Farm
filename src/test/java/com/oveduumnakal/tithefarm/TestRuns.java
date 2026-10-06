@@ -60,7 +60,7 @@ final class TestRuns
 	/** A snapshot over the given plots and their infos, with otherwise neutral values. */
 	static RunSnapshot snapshot(List<GameObject> route, List<PlotInfo> plots, ActionAdvisor.Advice advice)
 	{
-		return new RunSnapshot(route, route.size(), plots, 60, 0, 0, true, advice, false, 0, RunStatus.NEUTRAL,
+		return new RunSnapshot(route, route.size(), plots, 60, 0, true, advice, false, 0, RunStatus.NEUTRAL,
 			Collections.emptyList());
 	}
 
