@@ -21,9 +21,9 @@ a seed you cannot finish watering.
 
 - **Adapts to how you plant**
 
-  Plant somewhere other than the highlighted plot and the route re-plans around you: the seeds you have put in
-  keep their order, and the rest of the run becomes the shortest orderly loop from your newest plant back to
-  your first, using real walking distances through the farm. Follow it and it stays put — through every
+  Plant somewhere other than the highlighted plot and the route keeps its shape. Skip a route plot and it stays
+  next, so you double back to it. Plant a plot off the route and it takes the place of the plot you skipped,
+  while the route's last plot drops out to keep your crop count. The route then stays put — through every
   harvest and replant round.
 
 - **Record your own route**
@@ -101,9 +101,7 @@ a seed you cannot finish watering.
 
 - **Stay on the route**
 
-  Plant a route plot out of order and the route keeps its shape: the plot you skipped stays next, so you
-  double back to it. Two guards keep clicks in order, each moving "Cancel" to the top of the menu (nothing is
-  removed). **Prevent watering out of order** (on by default) guards every plant but the highlighted one while
+  Two guards keep clicks in order, each moving "Cancel" to the top of the menu (nothing is removed). **Prevent watering out of order** (on by default) guards every plant but the highlighted one while
   the next action is watering. **Prevent planting wrong plot** (off by default) guards every plot but the
   route's next one.
 
