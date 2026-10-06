@@ -243,7 +243,7 @@ public interface TitheFarmConfig extends Config
 	)
 	default Color plantColor()
 	{
-		return new Color(255, 212, 0, 230);
+		return new Color(46, 219, 90, 230);
 	}
 
 	@Alpha
@@ -269,7 +269,7 @@ public interface TitheFarmConfig extends Config
 	)
 	default Color harvestColor()
 	{
-		return new Color(46, 219, 90, 230);
+		return new Color(255, 212, 0, 230);
 	}
 
 	@Alpha
