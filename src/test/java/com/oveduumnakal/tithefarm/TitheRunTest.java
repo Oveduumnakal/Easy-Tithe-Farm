@@ -191,7 +191,7 @@ public class TitheRunTest
 		RunStatus status = run.snapshot().getStatus();
 		List<String> missing = status.getMissingTools();
 		assertTrue(missing.contains(InventoryCheck.SPADE));
-		assertFalse(missing.contains(InventoryCheck.DIBBER));
+		assertTrue(missing.contains(InventoryCheck.DIBBER));
 		assertFalse(missing.contains(InventoryCheck.CAN));
 		assertTrue(status.hasFertiliser());
 		assertEquals(12, status.getEnergyPercent());

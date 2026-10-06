@@ -32,8 +32,9 @@ import net.runelite.client.Notifier;
 /**
  * Fires a one-shot notification when the water carried drops below what the run still needs (read from the
  * plots, see {@link WaterTracker#runNeed}), and resets once the player refills above it, so a single
- * low-water run raises at most one alert rather than one per tick. The on-panel warning is drawn separately
- * by {@link TitheWaterOverlay}; this only handles the notification.
+ * low-water run raises at most one alert rather than one per tick. Whether and how it shows is up to the
+ * "Notify when low" notification setting. The on-panel warning is drawn separately by
+ * {@link TitheWaterOverlay}; this only handles the notification.
  */
 @Singleton
 class WaterReminder
@@ -69,9 +70,10 @@ class WaterReminder
 			return;
 		}
 
-		if (config.notifyOnRefill() && !notified)
+		if (!notified)
 		{
-			notifier.notify("Tithe Farm: not enough water to finish the run. Refill at the barrel.");
+			notifier.notify(config.notifyWhenLow(),
+				"Tithe Farm: not enough water to finish the run. Refill at the barrel.");
 			notified = true;
 		}
 	}
