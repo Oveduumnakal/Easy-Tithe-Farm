@@ -78,6 +78,8 @@ a seed you cannot finish watering.
   deposited, using the wiki's sack rules: a point for
   every third fruit in the sack, 2 more at the 100th (35 per full sack), and double experience from the 75th
   fruit plus its flat bonus. The Farmer's outfit pieces you wear are counted (up to 2.5% for the full set).
+  The session starts with the plugin and starts over when you log in on a different account; a world hop keeps
+  it.
 
 - **Tool check and run energy**
 

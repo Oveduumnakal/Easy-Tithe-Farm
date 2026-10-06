@@ -29,7 +29,6 @@ import org.junit.Test;
 
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.events.ConfigChanged;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -56,19 +55,15 @@ public class RouteRecorderMockTest
 		recorder = new RouteRecorder(config, configManager);
 	}
 
-	private static ConfigChanged toggle(boolean on)
+	private void toggle(boolean on)
 	{
-		ConfigChanged event = new ConfigChanged();
-		event.setGroup(TitheFarmConfig.GROUP);
-		event.setKey(TitheFarmConfig.RECORD_ROUTE);
-		event.setNewValue(String.valueOf(on));
-		return event;
+		recorder.onConfigChanged(TitheFarmConfig.RECORD_ROUTE, String.valueOf(on));
 	}
 
 	@Test
 	public void savesAndSwitchesToRecordedOnceTheCropCountIsPlanted()
 	{
-		recorder.onConfigChanged(toggle(true));
+		toggle(true);
 		recorder.onPlanted(new WorldPoint(1811, 3489, 0));
 		recorder.onPlanted(new WorldPoint(1811, 3489, 0));
 		verify(configManager, never()).setConfiguration(eq(TitheFarmConfig.GROUP), eq(TitheFarmConfig.RECORDED_ROUTE),
@@ -84,9 +79,9 @@ public class RouteRecorderMockTest
 	@Test
 	public void turningRecordingOffEarlySavesWhatWasPlanted()
 	{
-		recorder.onConfigChanged(toggle(true));
+		toggle(true);
 		recorder.onPlanted(new WorldPoint(1821, 3504, 0));
-		recorder.onConfigChanged(toggle(false));
+		toggle(false);
 		verify(configManager).setConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.RECORDED_ROUTE, "1821,3504");
 	}
 

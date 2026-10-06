@@ -32,7 +32,6 @@ import javax.inject.Singleton;
 
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.events.ConfigChanged;
 
 /**
  * Records the order the player plants in and saves it as their route.
@@ -59,13 +58,19 @@ class RouteRecorder
 		this.configManager = configManager;
 	}
 
-	/** Starts a fresh recording when the toggle turns on, and saves a partial one when it is turned off early. */
-	void onConfigChanged(ConfigChanged event)
+	/**
+	 * Starts a fresh recording when the toggle turns on, and saves a partial one when it is turned off early.
+	 * Call on the client thread, which reads the recording every frame.
+	 *
+	 * @param key      the changed key in this plugin's config group
+	 * @param newValue the key's new value, or {@code null} when it was unset
+	 */
+	void onConfigChanged(String key, String newValue)
 	{
-		if (!TitheFarmConfig.GROUP.equals(event.getGroup()) || !TitheFarmConfig.RECORD_ROUTE.equals(event.getKey()))
+		if (!TitheFarmConfig.RECORD_ROUTE.equals(key))
 			return;
 
-		if (Boolean.parseBoolean(event.getNewValue()))
+		if (Boolean.parseBoolean(newValue))
 			recording.clear();
 		else if (!recording.isEmpty())
 			save();
