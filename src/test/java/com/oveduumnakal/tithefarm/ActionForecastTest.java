@@ -154,6 +154,39 @@ public class ActionForecastTest
 	}
 
 	@Test
+	public void agingCarriesThePlantingAge()
+	{
+		List<PlotInfo> plots = new ArrayList<>();
+		plots.add(PlotInfo.of(STAGE1_WET, 5, 98, 20));
+		plots.add(PlotInfo.of(STAGE1_WET, 5, 50));
+		ActionForecast.age(plots, ActionForecast.ACTION_TICKS);
+		assertEquals(2, plots.get(0).getStage());
+		assertEquals(23, plots.get(0).getPlantAgeTicks());
+		assertEquals(PlotInfo.AGE_UNKNOWN, plots.get(1).getPlantAgeTicks());
+	}
+
+	@Test
+	public void wateringPassFollowsPlantingOrder()
+	{
+		List<PlotInfo> plots = new ArrayList<>();
+		plots.add(PlotInfo.of(STAGE3_DRY, 10, 10, 200));
+		plots.add(PlotInfo.of(STAGE3_DRY, 10, 10, 300));
+		plots.add(PlotInfo.of(STAGE3_DRY, 10, 10, 250));
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 60, Backpack.ROOMY, 0, 5);
+		assertTrail(trail, NextAction.WATER_PLANT, 2, NextAction.WATER_PLANT, 3, NextAction.WATER_PLANT, 1);
+	}
+
+	@Test
+	public void harvestFollowsPlantingOrder()
+	{
+		List<PlotInfo> plots = new ArrayList<>();
+		plots.add(PlotInfo.of(GROWN, 10, 10, 300));
+		plots.add(PlotInfo.of(GROWN, 10, 10, 400));
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 0, 60, Backpack.ROOMY, 0, 5);
+		assertTrail(trail, NextAction.HARVEST, 2, NextAction.HARVEST, 1);
+	}
+
+	@Test
 	public void depositsToMakeRoomAndKeepsHarvesting()
 	{
 		List<PlotInfo> plots = new ArrayList<>();

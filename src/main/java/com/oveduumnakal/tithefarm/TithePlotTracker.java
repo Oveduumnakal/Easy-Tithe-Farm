@@ -175,11 +175,13 @@ class TithePlotTracker
 	 * @param tile the plot's template tile
 	 * @param plot the plot object on that tile
 	 * @param tick the current client tick count
-	 * @return the plot's state, stage, remaining waters, age in its current id, and age in its growth stage
+	 * @return the plot's state, stage, remaining waters, age in its current id, age in its growth stage, and the
+	 *     ticks since its plant was seeded
 	 */
 	PlotInfo infoOf(WorldPoint tile, GameObject plot, int tick)
 	{
-		return PlotInfo.of(plot.getId(), ageSince(changedTicks.get(tile), tick), ageSince(stageTicks.get(tile), tick));
+		return PlotInfo.of(plot.getId(), ageSince(changedTicks.get(tile), tick), ageSince(stageTicks.get(tile), tick),
+			ageSince(plantedTicks.get(tile), tick));
 	}
 
 	/** Ticks since a recorded tick, or {@link PlotInfo#AGE_UNKNOWN} when none was recorded. */

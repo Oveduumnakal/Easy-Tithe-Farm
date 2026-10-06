@@ -68,6 +68,12 @@ public class ActionAdvisorTest
 		return PlotInfo.of(id, ticks);
 	}
 
+	/** A plot whose plant went in {@code plantedAgo} ticks ago and has sat {@code ticks} in its current state. */
+	private static PlotInfo planted(int id, int ticks, int plantedAgo)
+	{
+		return PlotInfo.of(id, ticks, ticks, plantedAgo);
+	}
+
 	private static List<PlotInfo> plots(PlotInfo... values)
 	{
 		return Arrays.asList(values);
@@ -127,6 +133,44 @@ public class ActionAdvisorTest
 	{
 		List<PlotInfo> run = plots(plot(STAGE2_WET), plot(STAGE2_DRY), plot(STAGE2_DRY));
 		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 5));
+	}
+
+	@Test
+	public void watersInPlantingOrderRatherThanTimeWaiting()
+	{
+		List<PlotInfo> run = plots(planted(STAGE2_DRY, 30, 200), planted(STAGE2_DRY, 10, 260),
+			planted(STAGE2_DRY, 20, 230));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 60));
+	}
+
+	@Test
+	public void harvestsInPlantingOrder()
+	{
+		List<PlotInfo> run = plots(planted(GROWN, 0, 300), planted(GROWN, 0, 340), planted(GROWN, 0, 320));
+		assertAdvice(NextAction.HARVEST, 1, decide(run, 0, 60));
+	}
+
+	@Test
+	public void urgentWateringJumpsTheQueueInPlantingOrder()
+	{
+		List<PlotInfo> run = plots(planted(STAGE2_DRY, ActionAdvisor.URGENT_TICKS + 10, 200),
+			planted(STAGE2_DRY, ActionAdvisor.URGENT_TICKS, 250), planted(STAGE2_DRY, 10, 400), plot(EMPTY));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 18, 60));
+	}
+
+	@Test
+	public void plantsSeededOnTheSameTickFallBackToTimeWaitingThenRoute()
+	{
+		List<PlotInfo> run = plots(planted(STAGE2_DRY, 5, 100), planted(STAGE2_DRY, 20, 100),
+			planted(STAGE2_DRY, 20, 100));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 60));
+	}
+
+	@Test
+	public void aPlantNotSeenGoingInCountsAsPlantedFirst()
+	{
+		List<PlotInfo> run = plots(planted(STAGE2_DRY, 40, 300), aged(STAGE2_DRY, 5));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 60));
 	}
 
 	@Test

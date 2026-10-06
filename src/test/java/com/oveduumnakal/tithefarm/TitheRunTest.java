@@ -46,12 +46,13 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Drives the run builder over a mocked 41-plot farm: route, adaptation, water need, wrap-up, and status. */
+/** Drives the run builder over a mocked 41-plot farm: route, adaptation, water need, planting order, and status. */
 public class TitheRunTest
 {
 	private static final int EMPTY = 27383;
 	private static final int FRESH_C = 27406;
 	private static final int STAGE1_WET_C = 27407;
+	private static final int STAGE2_DRY_C = 27409;
 	private static final int GROWN_C = 27415;
 
 	private Client client;
@@ -161,6 +162,31 @@ public class TitheRunTest
 		spawn(new int[]{1811, 3489}, STAGE1_WET_C);
 		RunSnapshot snapshot = run.snapshot();
 		assertEquals(2 + 19 * 3, snapshot.getRunNeed());
+	}
+
+	@Test
+	public void watersAndHarvestsInPlantingOrderWhenPlantedOutOfRouteOrder()
+	{
+		inventory(new Item(952, 1), new Item(5343, 1), new Item(13353, 1));
+		int[] first = TitheRoutes.BASIC_20.get(0);
+		int[] second = TitheRoutes.BASIC_20.get(1);
+		tick++;
+		spawn(second, FRESH_C);
+		tick++;
+		spawn(first, FRESH_C);
+		tick += 5;
+		spawn(second, STAGE2_DRY_C);
+		spawn(first, STAGE2_DRY_C);
+		RunSnapshot watering = run.snapshot();
+		assertEquals(NextAction.WATER_PLANT, watering.getAdvice().getAction());
+		assertEquals(2, watering.getTargetNumber());
+
+		tick += 5;
+		spawn(second, GROWN_C);
+		spawn(first, GROWN_C);
+		RunSnapshot harvest = run.snapshot();
+		assertEquals(NextAction.HARVEST, harvest.getAdvice().getAction());
+		assertEquals(2, harvest.getTargetNumber());
 	}
 
 	@Test

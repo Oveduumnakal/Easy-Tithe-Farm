@@ -34,11 +34,12 @@ import java.util.Set;
  * apply it to a copy of the plots, let a little time pass, and ask again. The result drives the fading trail of
  * highlights, so the player's eyes already know where the next few clicks go.
  *
- * <p>Applying an action: a planted plot becomes a fresh seed, a watered plot keeps its stage clock, a harvested
- * or cleared plot becomes empty, a harvest's fruit joins its stack or takes a free slot, and a deposit empties the
- * backpack of fruit. Each action costs {@link #ACTION_TICKS}; as the clock runs, watered plants grow into their
- * next stage (or are grown after the third) once their stage reaches {@link TitheFarmIds#STAGE_TICKS}, and
- * unwatered plants that run out of time die. When the advisor would wait, the clock jumps to the next plant to
+ * <p>Applying an action: a planted plot becomes a fresh seed, dated by the simulated clock so later passes take it
+ * in planting order like a real plant; a watered plot keeps its stage clock; a harvested or cleared plot becomes
+ * empty; a harvest's fruit joins its stack or takes a free slot; and a deposit empties the backpack of fruit.
+ * Each action costs {@link #ACTION_TICKS}; as the clock runs, watered plants grow into their next stage (or are
+ * grown after the third) once their stage reaches {@link TitheFarmIds#STAGE_TICKS}, and unwatered plants that
+ * run out of time die. When the advisor would wait, the clock jumps to the next plant to
  * grow. The forecast stops at an action that is not tied to a plot and that it cannot model: refilling, fetching
  * seeds, or freeing a slot.
  *
@@ -113,22 +114,22 @@ final class ActionForecast
 			switch (action)
 			{
 				case PLANT_SEED:
-					sim.set(index, PlotInfo.predicted(TithePlotState.UNWATERED, PlotInfo.TIER_UNKNOWN, 1, 0, 0));
+					sim.set(index, PlotInfo.predicted(TithePlotState.UNWATERED, PlotInfo.TIER_UNKNOWN, 1, 0, 0, 0));
 					seedsLeft--;
 					limit--;
 					break;
 				case WATER_PLANT:
 					sim.set(index, PlotInfo.predicted(TithePlotState.WATERED, plot.getTier(), plot.getStage(), 0,
-						plot.getStageAgeTicks()));
+						plot.getStageAgeTicks(), plot.getPlantAgeTicks()));
 					waterLeft--;
 					break;
 				case HARVEST:
-					sim.set(index, PlotInfo.predicted(TithePlotState.EMPTY, PlotInfo.TIER_UNKNOWN, 0, 0, 0));
+					sim.set(index, emptied());
 					pack = pack.harvested(plot.getTier());
 					limit++;
 					break;
 				default:
-					sim.set(index, PlotInfo.predicted(TithePlotState.EMPTY, PlotInfo.TIER_UNKNOWN, 0, 0, 0));
+					sim.set(index, emptied());
 					break;
 			}
 
@@ -138,9 +139,16 @@ final class ActionForecast
 		return trail;
 	}
 
+	/** A plot just harvested or cleared: empty, with no plant to date. */
+	private static PlotInfo emptied()
+	{
+		return PlotInfo.predicted(TithePlotState.EMPTY, PlotInfo.TIER_UNKNOWN, 0, 0, 0, PlotInfo.AGE_UNKNOWN);
+	}
+
 	/**
-	 * Lets time pass for every plot: ages grow, watered plants whose stage is over move to the next stage (or
-	 * are grown), and unwatered plants whose stage is over die. Plots of unknown age are left as they are.
+	 * Lets time pass for every plot: ages grow, the planting ages known among them included, watered plants whose
+	 * stage is over move to the next stage (or are grown), and unwatered plants whose stage is over die. Plots of
+	 * unknown stage age are left as they are.
 	 */
 	static void age(List<PlotInfo> plots, int ticks)
 	{
@@ -154,21 +162,25 @@ final class ActionForecast
 			int age = plot.getAgeTicks() == PlotInfo.AGE_UNKNOWN ? stageAge : plot.getAgeTicks();
 			int newAge = age + ticks;
 			int newStageAge = stageAge + ticks;
+			int plantAge = plot.getPlantAgeTicks() == PlotInfo.AGE_UNKNOWN
+				? PlotInfo.AGE_UNKNOWN
+				: plot.getPlantAgeTicks() + ticks;
 			if (newStageAge < TitheFarmIds.STAGE_TICKS)
 			{
 				plots.set(i, PlotInfo.predicted(plot.getState(), plot.getTier(), plot.getStage(), newAge,
-					newStageAge));
+					newStageAge, plantAge));
 				continue;
 			}
 
 			int over = newStageAge - TitheFarmIds.STAGE_TICKS;
 			if (plot.getState() == TithePlotState.WATERED)
-				plots.set(i, grow(plot, over));
+				plots.set(i, grow(plot, over, plantAge));
 			else if (plot.getState() == TithePlotState.UNWATERED)
-				plots.set(i, PlotInfo.predicted(TithePlotState.DEAD, plot.getTier(), plot.getStage(), over, over));
+				plots.set(i, PlotInfo.predicted(TithePlotState.DEAD, plot.getTier(), plot.getStage(), over, over,
+					plantAge));
 			else
 				plots.set(i, PlotInfo.predicted(plot.getState(), plot.getTier(), plot.getStage(), newAge,
-					newStageAge));
+					newStageAge, plantAge));
 		}
 	}
 
@@ -207,19 +219,23 @@ final class ActionForecast
 
 		if (unknown >= 0)
 		{
-			plots.set(unknown, grow(plots.get(unknown), 0));
+			plots.set(unknown, grow(plots.get(unknown), 0, plots.get(unknown).getPlantAgeTicks()));
 			return true;
 		}
 
 		return false;
 	}
 
-	/** A watered plant moved on to its next stage, or grown after the third, the given ticks into it. */
-	private static PlotInfo grow(PlotInfo plot, int ticks)
+	/**
+	 * A watered plant moved on to its next stage, or grown after the third, the given ticks into it, with its
+	 * planting age.
+	 */
+	private static PlotInfo grow(PlotInfo plot, int ticks, int plantAge)
 	{
 		if (plot.getStage() >= TitheFarmIds.WATERS_PER_CROP)
-			return PlotInfo.predicted(TithePlotState.GROWN, plot.getTier(), 0, ticks, ticks);
+			return PlotInfo.predicted(TithePlotState.GROWN, plot.getTier(), 0, ticks, ticks, plantAge);
 
-		return PlotInfo.predicted(TithePlotState.UNWATERED, plot.getTier(), plot.getStage() + 1, ticks, ticks);
+		return PlotInfo.predicted(TithePlotState.UNWATERED, plot.getTier(), plot.getStage() + 1, ticks, ticks,
+			plantAge);
 	}
 }
