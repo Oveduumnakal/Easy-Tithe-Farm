@@ -36,7 +36,9 @@ import java.util.function.Predicate;
  * played — plant and water each seed in one go, keep planting until the pass is done, then loop back:
  * <ol>
  * <li>Water a seed planted moments ago, so every seed is watered as it goes in.</li>
- * <li>Water any plant close to the end of its stage, the only thing that can still kill it.</li>
+ * <li>Water a plant close to the end of its stage, the only thing that can still kill it — but only when the
+ * plants and seeds ahead of it would not leave time to reach it in turn. A plant that the pass will reach in
+ * time waits its turn, so a pass is not broken off to walk back to the start of the route.</li>
  * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried.
  * A smaller haul stays in the backpack, and fruit is never deposited mid-run unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
@@ -65,6 +67,12 @@ final class ActionAdvisor
 	/** Ticks into a stage after which an unwatered plant jumps the queue (60 of 100 leaves about 24 seconds). */
 	static final int URGENT_TICKS = 60;
 
+	/** Ticks one plant or water takes in a real run, walking included; logged passes run 4 to 5 ticks a step. */
+	static final int PASS_STEP_TICKS = 5;
+
+	/** Spare ticks an urgent plant must keep after the pass reaches it, or it jumps the queue. */
+	static final int URGENT_MARGIN_TICKS = 10;
+
 	/** Fruit per bonus: every hundredth fruit deposited in a game earns 2 extra points. */
 	static final int BONUS_BATCH = 100;
 
@@ -89,7 +97,7 @@ final class ActionAdvisor
 			return water(fresh, water);
 
 		int urgent = earliestPlanted(plots, ActionAdvisor::isUrgent);
-		if (urgent >= 0)
+		if (urgent >= 0 && urgentAtRisk(plots, seedsAhead(plots, seeds, plantLimit)))
 			return water(urgent, water);
 
 		if (backpack.getFruit() >= BONUS_BATCH && RunSnapshot.nothingGrowing(plots))
@@ -182,6 +190,63 @@ final class ActionAdvisor
 	private static boolean isUrgent(PlotInfo plot)
 	{
 		return plot.getState() == TithePlotState.UNWATERED && plot.getAgeTicks() >= URGENT_TICKS;
+	}
+
+	/**
+	 * Whether some urgent plant would die before the pass reaches it: the seeds still to plant (each planted and
+	 * watered) and the plants watered ahead of it, at {@link #PASS_STEP_TICKS} each, leave it less than
+	 * {@link #URGENT_MARGIN_TICKS} to spare.
+	 *
+	 * @param plots      the plots of the run
+	 * @param seedsAhead the seeds that will be planted before routine watering resumes
+	 * @return true when an urgent plant must be watered now
+	 */
+	private static boolean urgentAtRisk(List<PlotInfo> plots, int seedsAhead)
+	{
+		for (PlotInfo plot : plots)
+		{
+			if (!isUrgent(plot))
+				continue;
+
+			int steps = 2 * seedsAhead + wateredAhead(plots, plot) + 1;
+			if (steps * PASS_STEP_TICKS + URGENT_MARGIN_TICKS >= plot.ticksUntilDeath())
+				return true;
+		}
+
+		return false;
+	}
+
+	/** How many seeds go in before routine watering resumes: none once a plant is grown, as harvest comes first. */
+	private static int seedsAhead(List<PlotInfo> plots, int seeds, int plantLimit)
+	{
+		int open = 0;
+		for (PlotInfo plot : plots)
+		{
+			if (plot.getState() == TithePlotState.GROWN)
+				return 0;
+
+			if (plot.needsSeed())
+				open++;
+		}
+
+		return Math.min(open, Math.min(seeds, plantLimit));
+	}
+
+	/** How many other unwatered plants the pass waters before this one: lower stages, then earlier plants. */
+	private static int wateredAhead(List<PlotInfo> plots, PlotInfo target)
+	{
+		int ahead = 0;
+		for (PlotInfo plot : plots)
+		{
+			if (plot == target || plot.getState() != TithePlotState.UNWATERED)
+				continue;
+
+			boolean lowerStage = plot.getStage() < target.getStage();
+			if (lowerStage || (plot.getStage() == target.getStage() && plantedBefore(plot, target)))
+				ahead++;
+		}
+
+		return ahead;
 	}
 
 	/**
