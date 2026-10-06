@@ -147,7 +147,7 @@ public class ActionForecastTest
 	{
 		List<PlotInfo> plots = new ArrayList<>();
 		plots.add(PlotInfo.of(STAGE1_WET, 5, 98));
-		ActionForecast.age(plots, ActionForecast.ACTION_TICKS);
+		ActionForecast.age(plots, 3);
 		assertEquals(TithePlotState.UNWATERED, plots.get(0).getState());
 		assertEquals(2, plots.get(0).getStage());
 		assertEquals(1, plots.get(0).getStageAgeTicks());
@@ -159,7 +159,7 @@ public class ActionForecastTest
 		List<PlotInfo> plots = new ArrayList<>();
 		plots.add(PlotInfo.of(STAGE1_WET, 5, 98, 20));
 		plots.add(PlotInfo.of(STAGE1_WET, 5, 50));
-		ActionForecast.age(plots, ActionForecast.ACTION_TICKS);
+		ActionForecast.age(plots, 3);
 		assertEquals(2, plots.get(0).getStage());
 		assertEquals(23, plots.get(0).getPlantAgeTicks());
 		assertEquals(PlotInfo.AGE_UNKNOWN, plots.get(1).getPlantAgeTicks());
