@@ -36,7 +36,8 @@ import net.runelite.api.Skill;
  * run panel. The reward goal is tracked separately by {@link GoalTracker}.
  *
  * <p>The session starts at the first logged-in tick after the plugin starts, and restarts if the plugin is
- * restarted or {@link #reset()} is called. Time only accrues while the player is in the farm.
+ * restarted or {@link #reset()} is called, which the plugin also does when a different account logs in. Time
+ * only accrues while the player is in the farm.
  * {@link #compactXp(int)} is static so it can be unit-tested.
  */
 @Singleton

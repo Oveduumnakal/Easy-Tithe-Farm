@@ -232,7 +232,7 @@ class TitheRun
 
 	/**
 	 * Re-plans the route when a seed went somewhere other than the route's next plot. Call after the tracker has
-	 * recorded the planting.
+	 * recorded the planting, on the client thread.
 	 *
 	 * @param tile the template tile of the plot just planted
 	 */
@@ -289,7 +289,10 @@ class TitheRun
 			committed.size(), order.size() - committed.size(), RouteRecorder.encode(order));
 	}
 
-	/** Forgets the adapted route and the distance graph, for a scene reload or a route-settings change. */
+	/**
+	 * Forgets the adapted route and the distance graph, for a scene reload or a route-settings change. Call only
+	 * on the client thread: {@link #onPlanted} reads the graph straight after building it.
+	 */
 	void reset()
 	{
 		adapted = null;

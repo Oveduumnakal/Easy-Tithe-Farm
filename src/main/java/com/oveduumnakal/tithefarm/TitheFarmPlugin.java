@@ -33,12 +33,16 @@ import com.google.inject.Provides;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.Scene;
+import net.runelite.api.Tile;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.PostMenuSort;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -61,6 +65,9 @@ public class TitheFarmPlugin extends Plugin
 
 	@Inject
 	private Client client;
+
+	@Inject
+	private ClientThread clientThread;
 
 	@Inject
 	private TitheFarmConfig config;
@@ -110,6 +117,16 @@ public class TitheFarmPlugin extends Plugin
 	@Inject
 	private TitheMenuSwapper menuSwapper;
 
+	/**
+	 * The account logged in at the last {@code LOGGED_IN}, or {@code -1} when none was. A different account
+	 * logging in restarts the session stats. Read and written only on the client thread.
+	 */
+	private long accountHash = -1;
+
+	/**
+	 * Adds the overlays and starts a fresh session, then restores the farm on the client thread: nothing spawns
+	 * for a plugin that was off, so the loaded scene is read again (see {@link #restoreScene()}).
+	 */
 	@Override
 	protected void startUp()
 	{
@@ -122,6 +139,7 @@ public class TitheFarmPlugin extends Plugin
 		layoutLogger.requestDump();
 		session.reset();
 		goals.reset();
+		clientThread.invokeLater(this::restoreScene);
 	}
 
 	@Override
@@ -153,11 +171,33 @@ public class TitheFarmPlugin extends Plugin
 		menuSwapper.onPostMenuSort();
 	}
 
+	/**
+	 * Hands a change to this plugin's config to the client thread. Panel edits arrive on the Swing thread, while
+	 * the run and the route recorder are read on the client thread every frame, so they are only changed there.
+	 * The key and value are read now, since the event object is not ours to keep.
+	 */
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		recorder.onConfigChanged(event);
-		if (TitheFarmConfig.GROUP.equals(event.getGroup()) && ROUTE_KEYS.contains(event.getKey()))
+		if (!TitheFarmConfig.GROUP.equals(event.getGroup()))
+			return;
+
+		String key = event.getKey();
+		String value = event.getNewValue();
+		clientThread.invokeLater(() -> applyConfigChange(key, value));
+	}
+
+	/**
+	 * Applies a config change on the client thread: the route recorder reacts to its toggle, and a route setting
+	 * drops the adapted route.
+	 *
+	 * @param key   the changed key in this plugin's config group
+	 * @param value the new value, or {@code null} when the key was unset
+	 */
+	private void applyConfigChange(String key, String value)
+	{
+		recorder.onConfigChanged(key, value);
+		if (ROUTE_KEYS.contains(key))
 			run.reset();
 	}
 
@@ -185,6 +225,54 @@ public class TitheFarmPlugin extends Plugin
 	}
 
 	/**
+	 * Restores tracking after a start-up, on the client thread. Forgets the adapted route and the death warnings
+	 * from before the plugin was turned off, notes the logged-in account, and, when logged in, feeds every object
+	 * in the loaded scene through the tracker the way {@link #onGameObjectSpawned} does. The scan sees no plot
+	 * change, so it never re-plans or records; the layout dump asked for in {@link #startUp()} is written on the
+	 * next tick in the farm. An object larger than a tile sits on several tiles; tracking it again is a no-op.
+	 */
+	private void restoreScene()
+	{
+		run.reset();
+		deathWarner.reset();
+		accountHash = client.getAccountHash();
+		WorldView view = client.getTopLevelWorldView();
+		if (client.getGameState() != GameState.LOGGED_IN || view == null)
+			return;
+
+		Scene scene = view.getScene();
+		if (scene == null)
+			return;
+
+		int tick = client.getTickCount();
+		for (Tile[][] plane : scene.getTiles())
+		{
+			if (plane == null)
+				continue;
+
+			for (Tile[] column : plane)
+				trackTiles(column, tick);
+		}
+	}
+
+	/** Feeds the game objects on a column of scene tiles to the tracker. */
+	private void trackTiles(Tile[] tiles, int tick)
+	{
+		if (tiles == null)
+			return;
+
+		for (Tile tile : tiles)
+		{
+			GameObject[] objects = tile == null ? null : tile.getGameObjects();
+			if (objects == null)
+				continue;
+
+			for (GameObject object : objects)
+				tracker.onSpawnOrChanged(object, tick);
+		}
+	}
+
+	/**
 	 * Clears tracked objects when the scene is torn down, and asks for a fresh layout dump once a new scene is
 	 * in. Despawn events do not always fire on a world hop, so without this the plugin would keep drawing plots
 	 * that are no longer loaded.
@@ -205,7 +293,22 @@ public class TitheFarmPlugin extends Plugin
 		else if (state == GameState.LOGGED_IN)
 		{
 			layoutLogger.requestDump();
+			onAccountLoggedIn(client.getAccountHash());
 		}
+	}
+
+	/**
+	 * Restarts the session stats when a different account logs in. A world hop or a scene load logs the same
+	 * account in again and keeps the session.
+	 *
+	 * @param hash the logged-in account's hash
+	 */
+	private void onAccountLoggedIn(long hash)
+	{
+		if (hash != accountHash)
+			session.reset();
+
+		accountHash = hash;
 	}
 
 	@Provides
