@@ -31,6 +31,8 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 
+import net.runelite.api.Client;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -64,7 +66,7 @@ public class OverlayGatingTest
 	public void nothingIsDrawnOutsideTheFarm()
 	{
 		when(tracker.inTitheFarm()).thenReturn(false);
-		assertNull(new TitheHighlightOverlay(config, tracker, run).render(graphics));
+		assertNull(new TitheHighlightOverlay(mock(Client.class), config, tracker, run).render(graphics));
 		assertNull(new TitheTimerOverlay(config, tracker, run).render(graphics));
 		verify(run, never()).snapshot();
 	}

@@ -165,11 +165,24 @@ public interface TitheFarmConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "showStepNumbers",
+		name = "Show step numbers",
+		description = "Write each highlighted plot's place in the order (1 to 5) on its north-east tile, glowing with "
+			+ "its border.",
+		section = guidanceSection,
+		position = 3
+	)
+	default boolean showStepNumbers()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "glowSpeed",
 		name = "Glow",
 		description = "How fast the highlights pulse. Solid turns the pulse off.",
 		section = guidanceSection,
-		position = 3
+		position = 4
 	)
 	default GlowSpeed glowSpeed()
 	{
@@ -312,7 +325,7 @@ public interface TitheFarmConfig extends Config
 		description = "Show a countdown over every plant that needs water: the time left before it dies. Turns "
 			+ "yellow, then red, as it gets close.",
 		section = guidanceSection,
-		position = 4
+		position = 5
 	)
 	default boolean showTimers()
 	{
@@ -351,7 +364,7 @@ public interface TitheFarmConfig extends Config
 		description = "Show only the next thing to click and the warnings that matter: no trail of plots after it, "
 			+ "no inventory boxes, and a panel cut down to the next action.",
 		section = guidanceSection,
-		position = 5
+		position = 6
 	)
 	default boolean minimalView()
 	{

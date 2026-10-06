@@ -28,12 +28,20 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Shape;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.inject.Inject;
 
+import net.runelite.api.Client;
 import net.runelite.api.GameObject;
+import net.runelite.api.Perspective;
+import net.runelite.api.Point;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -43,19 +51,22 @@ import net.runelite.client.ui.overlay.OverlayPosition;
  * reading: the plot to click now and the four after it from {@link ActionForecast}, brightest first and fading
  * to 10%; the water barrels when a refill is due; the sacks once 100 or more fruit is carried, or mid-run when
  * a full backpack needs a deposit before the next harvest; and the seed table when seeds are needed. Every
- * highlight pulses together at the configured glow speed. Minimal view drops the trail after the current plot.
- * The matching backpack items are lit by {@link TitheInventoryOverlay}, since this overlay draws under the
- * interfaces.
+ * highlight pulses together at the configured glow speed. Each trail plot carries its step number on its
+ * north-east tile, glowing with its border. Minimal view drops the trail after the current plot, so only the
+ * {@code 1} is left. The matching backpack items are lit by {@link TitheInventoryOverlay}, since this overlay
+ * draws under the interfaces.
  */
 class TitheHighlightOverlay extends Overlay
 {
+	private final Client client;
 	private final TitheFarmConfig config;
 	private final TithePlotTracker plotTracker;
 	private final TitheRun run;
 
 	@Inject
-	TitheHighlightOverlay(TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run)
+	TitheHighlightOverlay(Client client, TitheFarmConfig config, TithePlotTracker plotTracker, TitheRun run)
 	{
+		this.client = client;
 		this.config = config;
 		this.plotTracker = plotTracker;
 		this.run = run;
@@ -118,7 +129,7 @@ class TitheHighlightOverlay extends Overlay
 	/**
 	 * Draws the current plot and the predicted ones after it, fading step by step, each in its action's color. The
 	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape. Only the current
-	 * plot is filled; the ones after it are outlines.
+	 * plot is filled; the ones after it are outlines. Step numbers are written on top when enabled.
 	 */
 	private void highlightTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
 	{
@@ -134,6 +145,86 @@ class TitheHighlightOverlay extends Overlay
 			double strength = HighlightStyle.fade(step) * glow;
 			HighlightStyle.draw(graphics, plot.getCanvasTilePoly(), color, strength, step == 0);
 		}
+
+		if (config.showStepNumbers())
+			numberTrail(graphics, snapshot, glow);
+	}
+
+	/**
+	 * Writes each trail plot's step numbers on its north-east tile, in the color and strength of that plot's
+	 * brightest outline, so the numbers glow and fade with the border. Drawn after every outline, last step
+	 * first, so the current plot's number is on top.
+	 */
+	private void numberTrail(Graphics2D graphics, RunSnapshot snapshot, double glow)
+	{
+		List<ActionAdvisor.Advice> trail = snapshot.getTrail();
+		List<Integer> plotIndexes = new ArrayList<>();
+		for (ActionAdvisor.Advice advice : trail)
+			plotIndexes.add(advice.getPlotIndex());
+
+		String[] labels = stepLabels(plotIndexes);
+		graphics.setFont(FontManager.getRunescapeSmallFont());
+		for (int step = trail.size() - 1; step >= 0; step--)
+		{
+			ActionAdvisor.Advice advice = trail.get(step);
+			GameObject plot = snapshot.plotAt(advice.getPlotIndex());
+			Color color = colorOf(advice.getAction());
+			if (labels[step] == null || plot == null || color == null)
+				continue;
+
+			LocalPoint centre = plot.getLocalLocation();
+			if (centre == null)
+				continue;
+
+			int[] offset = northEastOffset(plot.sizeX(), plot.sizeY());
+			LocalPoint corner = centre.plus(offset[0], offset[1]);
+			Point location = Perspective.getCanvasTextLocation(client, graphics, corner, labels[step], 0);
+			if (location != null)
+			{
+				HighlightStyle.drawText(graphics, labels[step], location.getX(), location.getY(), color,
+					HighlightStyle.fade(step) * glow);
+			}
+		}
+	}
+
+	/**
+	 * The step-number text for each step of a trail, e.g. {@code 1} or {@code 1,2}. A plot that appears more than
+	 * once gets all its numbers on its first step, and {@code null} on the later ones, so the numbers are never
+	 * drawn over each other.
+	 *
+	 * @param plotIndexes the route index of each step's plot, current step first
+	 * @return the text per step, or {@code null} for a step whose numbers are written on an earlier step
+	 */
+	static String[] stepLabels(List<Integer> plotIndexes)
+	{
+		String[] labels = new String[plotIndexes.size()];
+		Map<Integer, Integer> firstStep = new HashMap<>();
+		for (int step = 0; step < plotIndexes.size(); step++)
+		{
+			Integer first = firstStep.putIfAbsent(plotIndexes.get(step), step);
+			if (first == null)
+				labels[step] = String.valueOf(step + 1);
+			else
+				labels[first] += "," + (step + 1);
+		}
+
+		return labels;
+	}
+
+	/**
+	 * The offset in local units from the centre of an object's footprint to the centre of its north-east tile:
+	 * one tile north and east for a 3x3 plot, none for a single tile.
+	 *
+	 * @param sizeX the footprint width in tiles
+	 * @param sizeY the footprint height in tiles
+	 * @return the offset as {@code {x, y}}
+	 */
+	static int[] northEastOffset(int sizeX, int sizeY)
+	{
+		return new int[]{
+			(sizeX - 1) * Perspective.LOCAL_TILE_SIZE / 2,
+			(sizeY - 1) * Perspective.LOCAL_TILE_SIZE / 2
+		};
 	}
 
 	/**

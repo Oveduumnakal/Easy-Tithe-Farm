@@ -128,6 +128,29 @@ final class HighlightStyle
 	}
 
 	/**
+	 * Writes text in the color at the given strength over a thin dark shadow that fades with it, so the text
+	 * stays readable over a tinted fill. Draws nothing for a strength that leaves the color fully transparent.
+	 *
+	 * @param graphics the graphics to draw on, with its font already set
+	 * @param text     the text
+	 * @param x        the x of the text's baseline start
+	 * @param y        the y of the text's baseline
+	 * @param color    the base color
+	 * @param strength the strength 0 to 1
+	 */
+	static void drawText(Graphics2D graphics, String text, int x, int y, Color color, double strength)
+	{
+		Color face = scale(color, strength);
+		if (face.getAlpha() == 0)
+			return;
+
+		graphics.setColor(new Color(0, 0, 0, face.getAlpha()));
+		graphics.drawString(text, x + 1, y + 1);
+		graphics.setColor(face);
+		graphics.drawString(text, x, y);
+	}
+
+	/**
 	 * A color with its alpha scaled by a strength.
 	 *
 	 * @param color    the base color

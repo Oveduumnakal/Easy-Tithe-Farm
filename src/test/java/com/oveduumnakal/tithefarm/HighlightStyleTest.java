@@ -25,12 +25,16 @@
 package com.oveduumnakal.tithefarm;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-/** Checks the trail fade, the glow pulse, and color scaling. */
+/** Checks the trail fade, the glow pulse, color scaling, and the step-number text. */
 public class HighlightStyleTest
 {
 	private static final double EPSILON = 1e-9;
@@ -70,5 +74,56 @@ public class HighlightStyleTest
 		assertEquals(new Color(255, 212, 0, 100), scaled);
 		assertEquals(0, HighlightStyle.scale(Color.WHITE, -1).getAlpha());
 		assertEquals(255, HighlightStyle.scale(Color.WHITE, 2).getAlpha());
+	}
+
+	@Test
+	public void textIsDrawnOverADarkShadowAndFadesWithTheStrength()
+	{
+		Color color = new Color(255, 212, 0);
+		BufferedImage image = textImage(color, 1);
+		assertTrue(contains(image, color.getRGB()));
+		assertTrue(contains(image, Color.BLACK.getRGB()));
+		assertTrue(visible(image));
+		assertFalse(visible(textImage(color, 0)));
+	}
+
+	/** A small transparent image with {@code 8} written on it at the given strength. */
+	private static BufferedImage textImage(Color color, double strength)
+	{
+		BufferedImage image = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D graphics = image.createGraphics();
+		HighlightStyle.drawText(graphics, "8", 4, 18, color, strength);
+		graphics.dispose();
+		return image;
+	}
+
+	/** Whether any pixel of the image is exactly the given ARGB value. */
+	private static boolean contains(BufferedImage image, int argb)
+	{
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				if (image.getRGB(x, y) == argb)
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Whether any pixel of the image is not fully transparent. */
+	private static boolean visible(BufferedImage image)
+	{
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				if ((image.getRGB(x, y) >>> 24) != 0)
+					return true;
+			}
+		}
+
+		return false;
 	}
 }
