@@ -41,8 +41,12 @@ public class ActionAdvisorTest
 	private static final int STAGE2_DRY = 27387;
 	private static final int STAGE2_WET = 27388;
 	private static final int STAGE3_DRY = 27390;
+	private static final int STAGE3_WET = 27391;
 	private static final int GROWN = 27393;
 	private static final int GROWN_B = 27404;
+
+	/** Ticks into a stage that leave too little time for anything but watering the plant. */
+	private static final int NEARLY_DEAD = TitheFarmIds.STAGE_TICKS - 15;
 
 	/** Room to spare and a small haul of fruit. */
 	private static final Backpack WITH_FRUIT = new Backpack(27, 1, 12, 1, true);
@@ -118,8 +122,34 @@ public class ActionAdvisorTest
 	@Test
 	public void leavesThePassForAPlantNearTheEndOfItsStage()
 	{
-		List<PlotInfo> run = plots(aged(STAGE2_DRY, ActionAdvisor.URGENT_TICKS), plot(STAGE1_WET), plot(EMPTY));
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, NEARLY_DEAD), plot(STAGE1_WET), plot(EMPTY));
 		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 18, 60));
+	}
+
+	@Test
+	public void anUrgentPlantTheRunReachesInTimeWaitsForTheLastSeed()
+	{
+		List<PlotInfo> run = plots(aged(STAGE2_DRY, ActionAdvisor.URGENT_TICKS), plot(STAGE1_WET), plot(EMPTY));
+		assertAdvice(NextAction.PLANT_SEED, 2, decide(run, 18, 60));
+	}
+
+	@Test
+	public void anUrgentPlantLeavesThePassWhenManySeedsAreStillToGoIn()
+	{
+		PlotInfo[] run = new PlotInfo[12];
+		run[0] = aged(STAGE2_DRY, ActionAdvisor.URGENT_TICKS);
+		for (int i = 1; i < run.length; i++)
+			run[i] = plot(EMPTY);
+
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(plots(run), 18, 60));
+	}
+
+	@Test
+	public void finishesTheEndOfThePassBeforeAnUrgentPlantAtTheStart()
+	{
+		List<PlotInfo> run = plots(planted(STAGE3_DRY, ActionAdvisor.URGENT_TICKS, 260),
+			planted(STAGE3_WET, 50, 255), planted(STAGE2_DRY, 7, 100), planted(STAGE2_WET, 98, 96));
+		assertAdvice(NextAction.WATER_PLANT, 2, decide(run, 0, 60));
 	}
 
 	@Test
@@ -155,8 +185,7 @@ public class ActionAdvisorTest
 	@Test
 	public void urgentWateringStillBeatsThePassUnderWay()
 	{
-		List<PlotInfo> run = plots(planted(STAGE3_DRY, ActionAdvisor.URGENT_TICKS, 200),
-			planted(STAGE2_DRY, 35, 130));
+		List<PlotInfo> run = plots(planted(STAGE3_DRY, NEARLY_DEAD, 200), planted(STAGE2_DRY, 35, 130));
 		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 0, 60));
 	}
 
