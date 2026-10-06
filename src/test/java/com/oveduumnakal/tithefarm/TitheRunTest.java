@@ -140,6 +140,34 @@ public class TitheRunTest
 	}
 
 	@Test
+	public void skippingARoutePlotDoublesBackToItInsteadOfReplanning()
+	{
+		for (int i = 0; i < 6; i++)
+		{
+			run.snapshot();
+			plant(TitheRoutes.BASIC_20.get(i));
+		}
+
+		run.snapshot();
+		plant(TitheRoutes.BASIC_20.get(7));
+		for (int i = 0; i < 8; i++)
+		{
+			if (i != 6)
+				spawn(TitheRoutes.BASIC_20.get(i), STAGE1_WET_C);
+		}
+
+		RunSnapshot snapshot = run.snapshot();
+		assertEquals(NextAction.PLANT_SEED, snapshot.getAdvice().getAction());
+		assertEquals(7, snapshot.getTargetNumber());
+		for (int i = 0; i < 20; i++)
+		{
+			int[] tile = tileOf(snapshot.getRoute().get(i));
+			assertEquals(TitheRoutes.BASIC_20.get(i)[0], tile[0]);
+			assertEquals(TitheRoutes.BASIC_20.get(i)[1], tile[1]);
+		}
+	}
+
+	@Test
 	public void plantingOffRouteReplansAroundThePlayer()
 	{
 		run.snapshot();
