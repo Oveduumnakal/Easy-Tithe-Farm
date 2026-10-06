@@ -73,8 +73,9 @@ a seed you cannot finish watering.
 
 - **Tonight's progress**
 
-  Your points, experience gained this session, and time in the farm. The points and experience each show a
-  (+n) for what the fruit in your backpack would add once deposited, using the wiki's sack rules: a point for
+  Your points, experience gained this session (XP), and time in the farm (Time), each on its own line of the
+  run panel. The points and experience each show a (+n) for what the fruit in your backpack would add once
+  deposited, using the wiki's sack rules: a point for
   every third fruit in the sack, 2 more at the 100th (35 per full sack), and double experience from the 75th
   fruit plus its flat bonus. The Farmer's outfit pieces you wear are counted (up to 2.5% for the full set).
 
