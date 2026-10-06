@@ -41,10 +41,11 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 /**
  * Lights up what to click in the scene, colored by what to do there, so the player can follow the run without
  * reading: the plot to click now and the four after it from {@link ActionForecast}, brightest first and fading
- * to 10%; the water barrels when a refill is due; the sacks once 100 or more fruit is carried; and the seed table
- * or sacks for the other errands. Every highlight pulses together at the configured glow speed. Minimal view
- * drops the trail after the current plot. The matching backpack items are lit by {@link TitheInventoryOverlay},
- * since this overlay draws under the interfaces.
+ * to 10%; the water barrels when a refill is due; the sacks once 100 or more fruit is carried, or mid-run when
+ * a full backpack needs a deposit before the next harvest; and the seed table when seeds are needed. Every
+ * highlight pulses together at the configured glow speed. Minimal view drops the trail after the current plot.
+ * The matching backpack items are lit by {@link TitheInventoryOverlay}, since this overlay draws under the
+ * interfaces.
  */
 class TitheHighlightOverlay extends Overlay
 {
@@ -80,7 +81,7 @@ class TitheHighlightOverlay extends Overlay
 		if (config.highlightNextAction())
 		{
 			highlightTrail(graphics, snapshot, glow);
-			highlightErrand(graphics, snapshot.getAdvice().getAction(), bonusDeposit, glow);
+			highlightErrand(graphics, snapshot, bonusDeposit, glow);
 		}
 
 		return null;
@@ -106,6 +107,15 @@ class TitheHighlightOverlay extends Overlay
 	}
 
 	/**
+	 * Whether the advice is a mid-run deposit to make room: a plant is grown but its fruit does not fit. The
+	 * between-runs deposit of a smaller haul is left to the panel, so the sacks do not glow for a few fruit.
+	 */
+	static boolean makeRoomDeposit(RunSnapshot snapshot)
+	{
+		return snapshot.getAdvice().getAction() == NextAction.DEPOSIT_FRUIT && !snapshot.isBetweenRuns();
+	}
+
+	/**
 	 * Draws the current plot and the predicted ones after it, fading step by step, each in its action's color. The
 	 * plot's whole patch is outlined, whatever grows on it, so every step looks the same shape. Only the current
 	 * plot is filled; the ones after it are outlines.
@@ -126,10 +136,13 @@ class TitheHighlightOverlay extends Overlay
 		}
 	}
 
-	/** Draws the scene object that goes with an errand action: the seed table, or the sacks. */
-	private void highlightErrand(Graphics2D graphics, NextAction action, boolean bonusDeposit, double glow)
+	/**
+	 * Draws the scene object that goes with an errand action: the seed table, or the sacks for a deposit that
+	 * makes room for a harvest.
+	 */
+	private void highlightErrand(Graphics2D graphics, RunSnapshot snapshot, boolean bonusDeposit, double glow)
 	{
-		switch (action)
+		switch (snapshot.getAdvice().getAction())
 		{
 			case GET_SEEDS:
 				GameObject table = plotTracker.getSeedTable();
@@ -138,7 +151,7 @@ class TitheHighlightOverlay extends Overlay
 
 				break;
 			case DEPOSIT_FRUIT:
-				if (!bonusDeposit)
+				if (!bonusDeposit && makeRoomDeposit(snapshot))
 					highlightObjects(graphics, plotTracker.getSacks(), config.nextActionColor(), glow);
 
 				break;

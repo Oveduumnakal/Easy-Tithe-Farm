@@ -185,7 +185,6 @@ class TitheRun
 		int[] counts = new int[items.length];
 		int seeds = 0;
 		int fruit = 0;
-		int occupied = 0;
 		for (int i = 0; i < items.length; i++)
 		{
 			Item item = items[i];
@@ -194,8 +193,6 @@ class TitheRun
 				continue;
 
 			counts[i] = item.getQuantity();
-
-			occupied++;
 			if (TitheFarmIds.isSeed(ids[i]))
 				seeds += item.getQuantity();
 			else if (TitheFarmIds.isFruit(ids[i]))
@@ -204,7 +201,7 @@ class TitheRun
 
 		int gricollerCharges = client.getVarbitValue(TitheFarmIds.GRICOLLER_CHARGES_VARBIT);
 		int water = WaterTracker.totalCharges(ids, gricollerCharges);
-		boolean inventoryFull = occupied >= TitheFarmIds.INVENTORY_SIZE && !(fruit > 0 && fruitStacks());
+		Backpack backpack = Backpack.of(ids, counts, fruitStacks());
 		int slots = ActionAdvisor.plantSlots(plots, config.cropCount());
 		int deposited = client.getVarbitValue(TitheFarmIds.SCORE_VARBIT);
 		boolean wrapUp = config.wrapUp();
@@ -229,8 +226,7 @@ class TitheRun
 		boolean cansFull = WaterTracker.cansFull(ids, gricollerCharges);
 		RunStatus status = new RunStatus(wrapUp, plantLimit, deposited, missingTools, fertiliser, energy, fruit,
 			DepositRewards.xp(deposited, ids, counts, DepositRewards.outfitBoost(wornIds())), cansFull);
-		ActionAdvisor.Advice decided = ActionAdvisor.decide(plots, seeds, water, fruit > 0, inventoryFull, plantLimit,
-			wrapUp);
+		ActionAdvisor.Advice decided = ActionAdvisor.decide(plots, seeds, water, backpack, plantLimit, wrapUp);
 		boolean betweenRuns = RunSnapshot.nothingGrowing(plots);
 		ActionAdvisor.Advice advice = config.waterRefillWarning()
 			? ActionAdvisor.topUpFirst(decided, betweenRuns, cansFull)
@@ -239,7 +235,7 @@ class TitheRun
 		if (advice.getPlotIndex() >= 0)
 		{
 			int length = config.minimalView() ? 1 : ActionForecast.TRAIL_LENGTH;
-			trail = ActionForecast.forecast(plots, seeds, water, fruit > 0, inventoryFull, plantLimit, wrapUp, length);
+			trail = ActionForecast.forecast(plots, seeds, water, backpack, plantLimit, wrapUp, length);
 		}
 
 		int runNeed = WaterTracker.runNeed(plots, plantLimit);

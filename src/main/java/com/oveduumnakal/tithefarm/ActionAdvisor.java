@@ -37,12 +37,14 @@ import java.util.function.Predicate;
  * <ol>
  * <li>Water a seed planted moments ago, so every seed is watered as it goes in.</li>
  * <li>Water any plant close to the end of its stage, the only thing that can still kill it.</li>
- * <li>Between runs — nothing growing — deposit any fruit carried before the next seed goes in. Fruit is never
- * deposited mid-run unless a harvest would not fit.</li>
+ * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried,
+ * or any fruit at all on a last run. A smaller haul stays in the backpack, and fruit is never deposited mid-run
+ * unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
  * otherwise plant it — or refill first when the water would not cover the rest of the run.</li>
  * <li>Water any other plant waiting for this stage's water, the one waiting longest first.</li>
- * <li>Harvest a grown plant, or deposit first when the backpack has no room for the fruit.</li>
+ * <li>Harvest the first grown plant whose fruit fits in the backpack. When none fits, deposit to make room, or
+ * free a slot when there is no fruit to deposit.</li>
  * <li>Collect seeds when a plot is waiting and none are carried.</li>
  * <li>Otherwise wait — or, on a last run with nothing left in the ground, leave.</li>
  * </ol>
@@ -70,14 +72,13 @@ final class ActionAdvisor
 	 * @param plots         the route plots in planting order
 	 * @param seeds         the seeds carried
 	 * @param water         the water charges carried
-	 * @param hasFruit      whether the backpack holds any Tithe Farm fruit
-	 * @param inventoryFull whether a harvest would not fit in the backpack
+	 * @param backpack      the fruit carried and the room left for a harvest
 	 * @param plantLimit    how many more seeds the run allows now; no seed is suggested at zero
 	 * @param wrapUp        whether this is the last run: no seed fetching, and "leave" once everything is in
 	 * @return the chosen action and the route index it targets ({@code -1} for non-plot actions)
 	 */
-	static Advice decide(List<PlotInfo> plots, int seeds, int water, boolean hasFruit, boolean inventoryFull,
-		int plantLimit, boolean wrapUp)
+	static Advice decide(List<PlotInfo> plots, int seeds, int water, Backpack backpack, int plantLimit,
+		boolean wrapUp)
 	{
 		int fresh = indexOf(plots, PlotInfo::isFreshSeed);
 		if (fresh >= 0)
@@ -87,7 +88,8 @@ final class ActionAdvisor
 		if (urgent >= 0)
 			return water(urgent, water);
 
-		if (hasFruit && RunSnapshot.nothingGrowing(plots))
+		boolean depositDue = wrapUp ? backpack.hasFruit() : backpack.getFruit() >= BONUS_BATCH;
+		if (depositDue && RunSnapshot.nothingGrowing(plots))
 			return new Advice(NextAction.DEPOSIT_FRUIT, -1);
 
 		int grown = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN);
@@ -109,10 +111,11 @@ final class ActionAdvisor
 
 		if (grown >= 0)
 		{
-			if (inventoryFull)
-				return new Advice(NextAction.DEPOSIT_FRUIT, -1);
+			int fits = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN && backpack.fits(plot.getTier()));
+			if (fits >= 0)
+				return new Advice(NextAction.HARVEST, fits);
 
-			return new Advice(NextAction.HARVEST, grown);
+			return new Advice(backpack.hasFruit() ? NextAction.DEPOSIT_FRUIT : NextAction.FREE_SLOT, -1);
 		}
 
 		boolean emptyPlot = indexOf(plots, plot -> plot.getState() == TithePlotState.EMPTY) >= 0;

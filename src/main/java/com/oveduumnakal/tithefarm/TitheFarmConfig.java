@@ -287,8 +287,8 @@ public interface TitheFarmConfig extends Config
 	@ConfigItem(
 		keyName = "nextActionColor",
 		name = "Other",
-		description = "Anything else to click: the sacks for a deposit under 100 fruit, and the next-action text in "
-			+ "the panel.",
+		description = "Anything else to click: the sacks when a full backpack needs a deposit mid-run, and the "
+			+ "next-action text in the panel.",
 		section = colorsSection,
 		position = 5
 	)

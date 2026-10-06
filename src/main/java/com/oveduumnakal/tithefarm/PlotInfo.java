@@ -25,7 +25,7 @@
 package com.oveduumnakal.tithefarm;
 
 /**
- * A client-free snapshot of one route plot: its decoded state, growth stage, how many waters it still needs,
+ * A client-free snapshot of one route plot: its decoded state, seed tier, growth stage, how many waters it still needs,
  * how long it has sat in its current object id, and how long it has been in its current growth stage. The two
  * ages differ only for a watered plant: watering changes the object id but not the stage clock, which runs from
  * the moment the plant entered the stage. {@link ActionAdvisor} and the water math work on lists of these so
@@ -36,15 +36,21 @@ final class PlotInfo
 	/** Age reported when the plot's current id appeared before tracking began. */
 	static final int AGE_UNKNOWN = -1;
 
+	/** Tier reported when the plant's seed tier is not known, such as a predicted planting. */
+	static final int TIER_UNKNOWN = -1;
+
 	private final TithePlotState state;
+	private final int tier;
 	private final int stage;
 	private final int watersRemaining;
 	private final int ageTicks;
 	private final int stageAgeTicks;
 
-	private PlotInfo(TithePlotState state, int stage, int watersRemaining, int ageTicks, int stageAgeTicks)
+	private PlotInfo(TithePlotState state, int tier, int stage, int watersRemaining, int ageTicks,
+		int stageAgeTicks)
 	{
 		this.state = state;
+		this.tier = tier;
 		this.stage = stage;
 		this.watersRemaining = watersRemaining;
 		this.ageTicks = ageTicks;
@@ -73,8 +79,8 @@ final class PlotInfo
 	 */
 	static PlotInfo of(int objectId, int ageTicks, int stageAgeTicks)
 	{
-		return new PlotInfo(TithePlotState.fromObjectId(objectId), TithePlotState.stageOf(objectId),
-			TithePlotState.watersRemaining(objectId), ageTicks, stageAgeTicks);
+		return new PlotInfo(TithePlotState.fromObjectId(objectId), TithePlotState.tierOf(objectId),
+			TithePlotState.stageOf(objectId), TithePlotState.watersRemaining(objectId), ageTicks, stageAgeTicks);
 	}
 
 	/**
@@ -82,12 +88,13 @@ final class PlotInfo
 	 * {@link ActionForecast} playing the run forward.
 	 *
 	 * @param state         the predicted state
+	 * @param tier          the seed tier 0 to 2, or {@link #TIER_UNKNOWN}
 	 * @param stage         the growth stage 1 to 3, or 0 when the state has none
 	 * @param ageTicks      ticks in this state, or {@link #AGE_UNKNOWN}
 	 * @param stageAgeTicks ticks in this growth stage, or {@link #AGE_UNKNOWN}
 	 * @return the plot snapshot
 	 */
-	static PlotInfo predicted(TithePlotState state, int stage, int ageTicks, int stageAgeTicks)
+	static PlotInfo predicted(TithePlotState state, int tier, int stage, int ageTicks, int stageAgeTicks)
 	{
 		int waters = 0;
 		if (state == TithePlotState.UNWATERED)
@@ -95,13 +102,19 @@ final class PlotInfo
 		else if (state == TithePlotState.WATERED)
 			waters = TitheFarmIds.WATERS_PER_CROP - stage;
 
-		return new PlotInfo(state, stage, waters, ageTicks, stageAgeTicks);
+		return new PlotInfo(state, tier, stage, waters, ageTicks, stageAgeTicks);
 	}
 
 	/** The decoded plot state. */
 	TithePlotState getState()
 	{
 		return state;
+	}
+
+	/** The plant's seed tier, 0 Golovanova to 2 Logavano, or {@link #TIER_UNKNOWN} for an empty or predicted plot. */
+	int getTier()
+	{
+		return tier;
 	}
 
 	/** The growth stage 1 to 3, or 0 when the plot has no stage. */

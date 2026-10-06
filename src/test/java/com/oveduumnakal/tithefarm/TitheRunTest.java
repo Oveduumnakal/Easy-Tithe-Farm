@@ -33,6 +33,7 @@ import org.junit.Test;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.InventoryID;
@@ -41,6 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +52,7 @@ public class TitheRunTest
 	private static final int EMPTY = 27383;
 	private static final int FRESH_C = 27406;
 	private static final int STAGE1_WET_C = 27407;
+	private static final int GROWN_C = 27415;
 
 	private Client client;
 	private TitheFarmConfig config;
@@ -72,6 +75,9 @@ public class TitheRunTest
 		when(client.getGameCycle()).thenAnswer(invocation -> cycle++);
 		when(client.getTickCount()).thenAnswer(invocation -> tick);
 		when(client.getEnergy()).thenReturn(10_000);
+		ItemComposition fruit = mock(ItemComposition.class);
+		when(fruit.isStackable()).thenReturn(true);
+		when(client.getItemDefinition(anyInt())).thenReturn(fruit);
 		inventory(new Item(952, 1), new Item(5343, 1), new Item(13353, 1), new Item(13425, 20));
 		when(client.getVarbitValue(TitheFarmIds.GRICOLLER_CHARGES_VARBIT)).thenReturn(1000);
 		for (int[] tile : TitheRoutesTest.farm())
@@ -204,5 +210,45 @@ public class TitheRunTest
 		RunSnapshot snapshot = run.snapshot();
 		int[] first = tileOf(snapshot.getRoute().get(0));
 		assertEquals(TitheRoutes.BASIC_20.get(0)[0], first[0]);
+	}
+
+	/** Fills the backpack: the usual tools and seeds, the given item, then spades up to 28 slots. */
+	private void fullBackpackWith(Item item)
+	{
+		Item[] items = new Item[TitheFarmIds.INVENTORY_SIZE];
+		items[0] = new Item(13353, 1);
+		items[1] = new Item(13425, 20);
+		items[2] = item;
+		for (int i = 3; i < items.length; i++)
+			items[i] = new Item(TitheFarmIds.SPADE, 1);
+
+		inventory(items);
+	}
+
+	@Test
+	public void fullBackpackWithNoFruitAsksToFreeASlot()
+	{
+		fullBackpackWith(new Item(TitheFarmIds.SPADE, 1));
+		spawn(new int[]{1811, 3489}, GROWN_C);
+		RunSnapshot snapshot = run.snapshot();
+		assertEquals(NextAction.FREE_SLOT, snapshot.getAdvice().getAction());
+	}
+
+	@Test
+	public void fullBackpackHarvestsIntoTheMatchingStack()
+	{
+		fullBackpackWith(new Item(TitheFarmIds.FRUIT_LOGAVANO, 12));
+		spawn(new int[]{1811, 3489}, GROWN_C);
+		RunSnapshot snapshot = run.snapshot();
+		assertEquals(NextAction.HARVEST, snapshot.getAdvice().getAction());
+	}
+
+	@Test
+	public void fullBackpackWithAnotherTiersStackDepositsFirst()
+	{
+		fullBackpackWith(new Item(TitheFarmIds.FRUIT_GOLOVANOVA, 12));
+		spawn(new int[]{1811, 3489}, GROWN_C);
+		RunSnapshot snapshot = run.snapshot();
+		assertEquals(NextAction.DEPOSIT_FRUIT, snapshot.getAdvice().getAction());
 	}
 }

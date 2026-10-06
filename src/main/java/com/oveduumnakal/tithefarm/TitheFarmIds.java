@@ -217,7 +217,27 @@ final class TitheFarmIds
 	/** Whether an item id is Tithe Farm produce of any tier. */
 	static boolean isFruit(int itemId)
 	{
-		return itemId == FRUIT_GOLOVANOVA || itemId == FRUIT_BOLOGANO || itemId == FRUIT_LOGAVANO;
+		return fruitTier(itemId) >= 0;
+	}
+
+	/**
+	 * The seed tier a fruit comes from, numbered like the plot tiers: 0 Golovanova, 1 Bologano, 2 Logavano.
+	 *
+	 * @param itemId the inventory item id
+	 * @return the tier 0 to 2, or {@code -1} when the item is not Tithe Farm fruit
+	 */
+	static int fruitTier(int itemId)
+	{
+		if (itemId == FRUIT_GOLOVANOVA)
+			return 0;
+
+		if (itemId == FRUIT_BOLOGANO)
+			return 1;
+
+		if (itemId == FRUIT_LOGAVANO)
+			return 2;
+
+		return -1;
 	}
 
 	/**
