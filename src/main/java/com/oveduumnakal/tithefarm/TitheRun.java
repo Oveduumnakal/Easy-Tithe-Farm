@@ -225,7 +225,7 @@ class TitheRun
 		}
 
 		int runNeed = WaterTracker.runNeed(plots, slots);
-		return new RunSnapshot(route, routeLength, plots, water, seeds, runNeed,
+		return new RunSnapshot(route, routeLength, plots, water, runNeed,
 			WaterTracker.canAffordPlant(plots, water, slots), advice, recording, recorder.getRecording().size(),
 			status, trail);
 	}
@@ -285,7 +285,7 @@ class TitheRun
 
 		adapted = order;
 		cached = null;
-		log.info("{} replan after off-route plant at {}: kept {}, planned {} -> {}", TitheLayoutLogger.TAG, tile,
+		log.debug("{} replan after off-route plant at {}: kept {}, planned {} -> {}", TitheLayoutLogger.TAG, tile,
 			committed.size(), order.size() - committed.size(), RouteRecorder.encode(order));
 	}
 

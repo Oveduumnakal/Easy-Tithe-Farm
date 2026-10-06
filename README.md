@@ -81,7 +81,8 @@ a seed you cannot finish watering.
 - **Tool check and run energy**
 
   A red warning if your spade, seed dibber, or watering can is missing, if Gricoller's fertiliser is in your
-  backpack, or if run energy drops low — with your energy or stamina potion boxed.
+  backpack, or if run energy drops low — with your energy or stamina potion boxed. Finished the Barbarian
+  Training farming step? Turn on **I plant barehanded** and a missing dibber is not flagged.
 
 - **Minimal view**
 
@@ -100,14 +101,16 @@ a seed you cannot finish watering.
 
   Between runs, every watering can that is not full (a regular can under 8, Gricoller's can under 1,000)
   and the water barrels glow blue, and the first seed waits until every can is full. If your water will not
-  finish a run already under way, the panel turns red and the cans and barrels glow blue, with an optional
-  notification so you catch it even while tabbed out.
+  finish a run already under way, the panel turns red and the cans and barrels glow blue, and a notification
+  fires once so you catch it even while tabbed out. It is on by default and follows RuneLite's usual
+  notification settings (tray, sound, focus, and so on).
 
-- **Plant guard**
+- **Prevent planting (low water)**
 
-  If your water would not cover another seed on top of what your planted crops still need, the plugin moves
-  "Cancel" to the top of the menu so a stray click cannot sink a seed you cannot water through to harvest.
-  It only reorders the menu — nothing is ever removed — and you can turn it off.
+  Before each seed, the plugin checks the whole rest of the run: your water must cover what your planted crops
+  still need plus three for every seed the run still has room for. If it does not, "Cancel" moves to the top
+  of the menu so a stray click cannot sink a seed you cannot water through to harvest. It only reorders the
+  menu — nothing is ever removed — and you can turn it off.
 
 ### Save for rewards
 
@@ -115,8 +118,9 @@ a seed you cannot finish watering.
 
   Tick the Farmer Gricoller rewards you are saving for, with a quantity for the repeatable ones like seed packs
   or herb boxes. A goal box at the farm and in the lobby shows the combined cost, your progress, a points bar,
-  and roughly how many runs are left at your crop count. It warns if the total is more than the 16,000 points
-  you can hold.
+  and roughly how many runs are left at your crop count, counting the fruit in your backpack as if deposited.
+  It reads "deposit" when depositing that fruit is all you still need, and "ready!" once your points cover the
+  goal. It warns if the total is more than the 16,000 points you can hold.
 
 - **Goal notification**
 

@@ -39,7 +39,6 @@ final class RunSnapshot
 	private final int routeLength;
 	private final List<PlotInfo> plots;
 	private final int water;
-	private final int seeds;
 	private final int runNeed;
 	private final boolean canAffordPlant;
 	private final ActionAdvisor.Advice advice;
@@ -55,7 +54,6 @@ final class RunSnapshot
 	 * @param routeLength    how many leading entries of {@code route} are the numbered route
 	 * @param plots          the matching plot snapshots, index for index
 	 * @param water          the water charges carried
-	 * @param seeds          the seeds carried
 	 * @param runNeed        the water needed to finish the run
 	 * @param canAffordPlant whether a seed can be planted with water enough for the whole run
 	 * @param advice         the advised next action
@@ -64,7 +62,7 @@ final class RunSnapshot
 	 * @param status         the run's state beyond its plots
 	 * @param trail          the current plot action and the predicted ones after it, one per plot
 	 */
-	RunSnapshot(List<GameObject> route, int routeLength, List<PlotInfo> plots, int water, int seeds, int runNeed,
+	RunSnapshot(List<GameObject> route, int routeLength, List<PlotInfo> plots, int water, int runNeed,
 		boolean canAffordPlant, ActionAdvisor.Advice advice, boolean recording, int recordedCount, RunStatus status,
 		List<ActionAdvisor.Advice> trail)
 	{
@@ -72,7 +70,6 @@ final class RunSnapshot
 		this.routeLength = routeLength;
 		this.plots = Collections.unmodifiableList(plots);
 		this.water = water;
-		this.seeds = seeds;
 		this.runNeed = runNeed;
 		this.canAffordPlant = canAffordPlant;
 		this.advice = advice;
@@ -117,12 +114,6 @@ final class RunSnapshot
 	int getWater()
 	{
 		return water;
-	}
-
-	/** The seeds carried. */
-	int getSeeds()
-	{
-		return seeds;
 	}
 
 	/** The water needed to finish the run. */

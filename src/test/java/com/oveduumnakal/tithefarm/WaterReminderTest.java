@@ -30,15 +30,19 @@ import org.junit.Before;
 import org.junit.Test;
 
 import net.runelite.client.Notifier;
+import net.runelite.client.config.Notification;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Verifies the low-water notification fires once per shortfall and only when enabled. */
+/** Verifies the low-water notification fires once per shortfall, through the configured notification. */
 public class WaterReminderTest
 {
 	private TitheFarmConfig config;
@@ -54,14 +58,13 @@ public class WaterReminderTest
 		run = mock(TitheRun.class);
 		notifier = mock(Notifier.class);
 		when(tracker.inTitheFarm()).thenReturn(true);
-		when(config.notifyOnRefill()).thenReturn(true);
 		reminder = new WaterReminder(config, tracker, run, notifier);
 	}
 
 	private void water(int carried, int needed)
 	{
 		RunSnapshot snapshot = new RunSnapshot(TestRuns.listOf(TestRuns.plot(27383, 1L)), 1,
-			TestRuns.listOf(PlotInfo.of(27383, 0)), carried, 20, needed, true,
+			TestRuns.listOf(PlotInfo.of(27383, 0)), carried, needed, true,
 			new ActionAdvisor.Advice(NextAction.WAIT, -1), false, 0, RunStatus.NEUTRAL,
 			Collections.emptyList());
 		when(run.snapshot()).thenReturn(snapshot);
@@ -73,22 +76,34 @@ public class WaterReminderTest
 		water(10, 60);
 		reminder.onTick();
 		reminder.onTick();
-		verify(notifier, times(1)).notify(anyString());
+		verify(notifier, times(1)).notify(any(Notification.class), anyString());
 		water(64, 60);
 		reminder.onTick();
 		water(10, 60);
 		reminder.onTick();
-		verify(notifier, times(2)).notify(anyString());
+		verify(notifier, times(2)).notify(any(Notification.class), anyString());
 	}
 
 	@Test
-	public void quietWhenThereIsEnoughOrItIsOff()
+	public void quietWhenThereIsEnough()
 	{
 		water(64, 60);
 		reminder.onTick();
-		when(config.notifyOnRefill()).thenReturn(false);
+		verify(notifier, never()).notify(any(Notification.class), anyString());
+	}
+
+	@Test
+	public void onByDefault()
+	{
+		assertEquals(Notification.ON, config.notifyWhenLow());
+	}
+
+	@Test
+	public void usesTheConfiguredNotification()
+	{
+		when(config.notifyWhenLow()).thenReturn(Notification.OFF);
 		water(10, 60);
 		reminder.onTick();
-		verify(notifier, never()).notify(anyString());
+		verify(notifier).notify(same(Notification.OFF), anyString());
 	}
 }
