@@ -35,16 +35,15 @@ import net.runelite.client.Notifier;
 
 /**
  * Notifies once when a plant enters the warning window before it dies for lack of water — for the moment a
- * child wakes up or the phone rings mid-run. Each plant warns at most once per growth stage: a plot's object
- * hash changes with every stage, so the hash alone is the de-duplication key. RuneLite's own notification
- * settings decide whether it also fires while the client is focused.
+ * child wakes up or the phone rings mid-run. A plant warns once each time it enters the window. The key is the
+ * plot's object hash, which comes from its scene tile and object id: watering or a new stage changes the id and so
+ * the hash, but the same plot at the same stage and seed has the same hash again on every later run. So only the
+ * hashes still inside the window are remembered; one that leaves it is forgotten and warns again when it returns.
+ * RuneLite's own notification settings decide whether it also fires while the client is focused.
  */
 @Singleton
 class DeathWarner
 {
-	/** Warned hashes kept before the set is pruned; far more than one farm's worth of plant stages. */
-	private static final int MAX_REMEMBERED = 512;
-
 	private final TitheFarmConfig config;
 	private final TithePlotTracker plotTracker;
 	private final TitheRun run;
@@ -70,26 +69,30 @@ class DeathWarner
 		List<GameObject> route = snapshot.getRoute();
 		List<PlotInfo> plots = snapshot.getPlots();
 		int window = TitheTime.ticks(config.deathWarnSeconds());
+		Set<Long> inWindow = new HashSet<>();
 		int dying = 0;
 		int soonest = Integer.MAX_VALUE;
 		for (int i = 0; i < route.size(); i++)
 		{
 			int ticks = plots.get(i).ticksUntilDeath();
-			if (ticks < 0 || ticks > window || !warned.add(route.get(i).getHash()))
+			if (ticks < 0 || ticks > window)
+				continue;
+
+			long hash = route.get(i).getHash();
+			inWindow.add(hash);
+			if (!warned.add(hash))
 				continue;
 
 			dying++;
 			soonest = Math.min(soonest, ticks);
 		}
 
+		warned.retainAll(inWindow);
 		if (dying > 0)
 		{
 			String plants = dying == 1 ? "A plant dies" : dying + " plants die";
 			notifier.notify("Tithe Farm: " + plants + " in " + TitheTime.seconds(soonest) + "s. Water now!");
 		}
-
-		if (warned.size() > MAX_REMEMBERED)
-			warned.clear();
 	}
 
 	/** Forgets which plants were warned about, for a scene reload. */

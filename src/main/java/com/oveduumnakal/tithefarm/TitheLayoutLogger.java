@@ -46,13 +46,13 @@ import net.runelite.api.coords.WorldPoint;
 /**
  * Debug logging of the farm's real layout, for checking the route presets against the game.
  *
- * <p>Always on for now. The first tick inside the farm after a scene load writes to the RuneLite log
- * ({@code client.log}):
- * every plot's template tile, region tile, instance tile, object id, and footprint; the barrels, sacks, and seed
- * table; the current route in order; and an ASCII map of the area built from the scene's collision flags, so the
- * walkable tiles between plots are visible. Afterwards, every plot change is logged with the tile the player is
- * standing on, which records where each plant, water, and harvest was done from. Every line starts with
- * {@value #TAG} so it can be pulled out with grep.
+ * <p>Everything is logged at DEBUG, so a normal client writes nothing and does no work here; the dev client
+ * ({@code ./gradlew run}) shows it. The first tick inside the farm after a scene load writes every plot's template
+ * tile, region tile, instance tile, object id, and footprint; the barrels, sacks, and seed table; the current route
+ * in order; and an ASCII map of the area built from the scene's collision flags, so the walkable tiles between
+ * plots are visible. Afterwards, every plot change is logged with the tile the player is standing on, which
+ * records where each plant, water, and harvest was done from. Every line starts with {@value #TAG} so it can be
+ * pulled out with grep.
  */
 @Singleton
 class TitheLayoutLogger
@@ -99,7 +99,7 @@ class TitheLayoutLogger
 	/** Writes a pending layout dump, and logs the advice whenever it changes. */
 	void onTick()
 	{
-		if (!tracker.inTitheFarm())
+		if (!log.isDebugEnabled() || !tracker.inTitheFarm())
 			return;
 
 		if (pending)
@@ -114,7 +114,7 @@ class TitheLayoutLogger
 		{
 			lastScore = score;
 			lastPoints = points;
-			log.info("{} varbits score={} points={} tick={}", TAG, score, points, client.getTickCount());
+			log.debug("{} varbits score={} points={} tick={}", TAG, score, points, client.getTickCount());
 		}
 
 		RunSnapshot snapshot = run.snapshot();
@@ -125,7 +125,7 @@ class TitheLayoutLogger
 		if (!text.equals(lastAdvice))
 		{
 			lastAdvice = text;
-			log.info("{} advice {} tick={}", TAG, text, client.getTickCount());
+			log.debug("{} advice {} tick={}", TAG, text, client.getTickCount());
 		}
 	}
 
@@ -137,11 +137,11 @@ class TitheLayoutLogger
 	 */
 	void onPlotChanged(GameObject plot, int previousId)
 	{
-		if (previousId < 0 || previousId == plot.getId())
+		if (!log.isDebugEnabled() || previousId < 0 || previousId == plot.getId())
 			return;
 
 		WorldPoint tile = TithePlotTracker.templateTile(plot);
-		log.info("{} plot {} {}->{} ({}->{}) player={} tick={}", TAG, describe(tile),
+		log.debug("{} plot {} {}->{} ({}->{}) player={} tick={}", TAG, describe(tile),
 			TithePlotState.fromObjectId(previousId), TithePlotState.fromObjectId(plot.getId()), previousId,
 			plot.getId(), playerTile(), client.getTickCount());
 	}
@@ -150,7 +150,7 @@ class TitheLayoutLogger
 	private void dump()
 	{
 		WorldView view = client.getTopLevelWorldView();
-		log.info("{} ===== dump: instance={} plane={} plots={} player={} =====", TAG, view.isInstance(),
+		log.debug("{} ===== dump: instance={} plane={} plots={} player={} =====", TAG, view.isInstance(),
 			view.getPlane(), tracker.getPlotsByTile().size(), playerTile());
 
 		Map<Long, Character> marks = new HashMap<>();
@@ -163,7 +163,7 @@ class TitheLayoutLogger
 			GameObject plot = entry.getValue();
 			Point min = plot.getSceneMinLocation();
 			Point max = plot.getSceneMaxLocation();
-			log.info("{} plot {} id={} state={} instance={} size={}x{} sceneMin={},{} sceneMax={},{}", TAG,
+			log.debug("{} plot {} id={} state={} instance={} size={}x{} sceneMin={},{} sceneMax={},{}", TAG,
 				describe(entry.getKey()), plot.getId(), TithePlotState.fromObjectId(plot.getId()),
 				plot.getWorldLocation(), plot.sizeX(), plot.sizeY(), min.getX(), min.getY(), max.getX(),
 				max.getY());
@@ -176,34 +176,34 @@ class TitheLayoutLogger
 
 		for (GameObject barrel : tracker.getWaterBarrels())
 		{
-			log.info("{} barrel {} id={}", TAG, describe(TithePlotTracker.templateTile(barrel)), barrel.getId());
+			log.debug("{} barrel {} id={}", TAG, describe(TithePlotTracker.templateTile(barrel)), barrel.getId());
 			markFootprint(marks, barrel, 'W');
 		}
 
 		for (GameObject sack : tracker.getSacks())
 		{
-			log.info("{} sack {} id={}", TAG, describe(TithePlotTracker.templateTile(sack)), sack.getId());
+			log.debug("{} sack {} id={}", TAG, describe(TithePlotTracker.templateTile(sack)), sack.getId());
 			markFootprint(marks, sack, 'S');
 		}
 
 		GameObject table = tracker.getSeedTable();
 		if (table != null)
 		{
-			log.info("{} seedTable {}", TAG, describe(TithePlotTracker.templateTile(table)));
+			log.debug("{} seedTable {}", TAG, describe(TithePlotTracker.templateTile(table)));
 			markFootprint(marks, table, 'T');
 		}
 
 		RunSnapshot snapshot = run.snapshot();
-		log.info("{} route mode={} cropCount={} length={}", TAG, config.routeMode(), config.cropCount(),
+		log.debug("{} route mode={} cropCount={} length={}", TAG, config.routeMode(), config.cropCount(),
 			snapshot.getRouteLength());
 		List<GameObject> route = snapshot.getRoute();
 		for (int i = 0; i < snapshot.getRouteLength(); i++)
-			log.info("{} route #{} {}", TAG, i + 1, describe(TithePlotTracker.templateTile(route.get(i))));
+			log.debug("{} route #{} {}", TAG, i + 1, describe(TithePlotTracker.templateTile(route.get(i))));
 
 		if (minX <= maxX)
 			dumpGrid(view, marks, minX - MARGIN, minY - MARGIN, maxX + MARGIN, maxY + MARGIN);
 
-		log.info("{} ===== end dump =====", TAG);
+		log.debug("{} ===== end dump =====", TAG);
 	}
 
 	/**
@@ -216,7 +216,7 @@ class TitheLayoutLogger
 		CollisionData[] maps = view.getCollisionMaps();
 		if (maps == null || maps[view.getPlane()] == null)
 		{
-			log.info("{} no collision map", TAG);
+			log.debug("{} no collision map", TAG);
 			return;
 		}
 
@@ -227,10 +227,10 @@ class TitheLayoutLogger
 		int sceneY0 = Math.max(0, y0);
 		int sceneX1 = Math.min(flags.length - 1, x1);
 		int sceneY1 = Math.min(flags[0].length - 1, y1);
-		log.info("{} grid legend: P plot, W barrel, S sack, T table, @ player, # blocked, + wall edge, . open",
+		log.debug("{} grid legend: P plot, W barrel, S sack, T table, @ player, # blocked, + wall edge, . open",
 			TAG);
 		WorldPoint corner = template(view, sceneX0, sceneY0);
-		log.info("{} grid scene x {}..{} y {}..{}; bottom-left template tile {}", TAG, sceneX0, sceneX1, sceneY0,
+		log.debug("{} grid scene x {}..{} y {}..{}; bottom-left template tile {}", TAG, sceneX0, sceneX1, sceneY0,
 			sceneY1, corner);
 		for (int sy = sceneY1; sy >= sceneY0; sy--)
 		{
@@ -239,7 +239,7 @@ class TitheLayoutLogger
 				row.append(cell(flags[sx][sy], marks.get(key(sx, sy)), playerLocal, sx, sy));
 
 			WorldPoint left = template(view, sceneX0, sy);
-			log.info("{} grid y={} x0={} {}", TAG, left.getY(), left.getX(), row);
+			log.debug("{} grid y={} x0={} {}", TAG, left.getY(), left.getX(), row);
 		}
 	}
 
