@@ -138,8 +138,8 @@ class TitheWaterOverlay extends OverlayPanel
 	}
 
 	/**
-	 * The points and tonight's time and experience, each with what the carried fruit would add once deposited,
-	 * when enabled. The reward goal has its own box.
+	 * The points, tonight's experience, and the time in the farm, each on its own line, when enabled. The points
+	 * and experience carry what the carried fruit would add once deposited. The reward goal has its own box.
 	 */
 	private void addSession(RunStatus status)
 	{
@@ -153,14 +153,28 @@ class TitheWaterOverlay extends OverlayPanel
 			.left("Points")
 			.right(pending > 0 ? points + " (+" + pending + ")" : String.valueOf(points))
 			.build());
-		String xp = SessionTracker.compactXp(session.xpTonight());
-		if (status.getPendingXp() > 0)
-			xp += " (+" + SessionTracker.compactXp(status.getPendingXp()) + ")";
-
 		panelComponent.getChildren().add(LineComponent.builder()
-			.left("Tonight")
-			.right(TitheTime.format(session.ticksInFarm()) + "  " + xp + " xp")
+			.left("XP")
+			.right(xpText(session.xpTonight(), status.getPendingXp()))
 			.build());
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left("Time")
+			.right(TitheTime.format(session.ticksInFarm()))
+			.build());
+	}
+
+	/**
+	 * Tonight's experience in compact form, with what the carried fruit would add once deposited, e.g.
+	 * {@code 45.6k (+1.2k)}. The {@code (+n)} is left off when no fruit is carried.
+	 *
+	 * @param xp the experience gained this session
+	 * @param pendingXp the experience the carried fruit would add
+	 * @return the text for the XP line
+	 */
+	static String xpText(int xp, int pendingXp)
+	{
+		String text = SessionTracker.compactXp(xp);
+		return pendingXp > 0 ? text + " (+" + SessionTracker.compactXp(pendingXp) + ")" : text;
 	}
 
 	/** The next-action word, with the route number for a plot action. */
