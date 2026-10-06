@@ -134,6 +134,15 @@ public class ActionAdvisorTest
 	}
 
 	@Test
+	public void anUrgentPlantLeavesThePassWhenTheWaterWouldRunOutBeforeIt()
+	{
+		List<PlotInfo> run = plots(planted(STAGE3_DRY, ActionAdvisor.URGENT_TICKS, 260),
+			planted(STAGE2_DRY, 7, 100), planted(STAGE2_DRY, 5, 96));
+		assertAdvice(NextAction.WATER_PLANT, 1, decide(run, 0, 3));
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 0, 2));
+	}
+
+	@Test
 	public void anUrgentPlantLeavesThePassWhenManySeedsAreStillToGoIn()
 	{
 		PlotInfo[] run = new PlotInfo[12];
