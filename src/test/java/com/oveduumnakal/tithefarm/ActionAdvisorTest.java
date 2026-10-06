@@ -180,6 +180,15 @@ public class ActionAdvisorTest
 	}
 
 	@Test
+	public void spendsCarriedWaterOnWaitingPlantsBeforeRefilling()
+	{
+		List<PlotInfo> run = plots(planted(STAGE2_DRY, 5, 120), planted(STAGE2_DRY, 3, 110),
+			planted(STAGE2_DRY, 1, 100), plot(EMPTY), plot(EMPTY));
+		assertAdvice(NextAction.WATER_PLANT, 0, decide(run, 2, 5));
+		assertAdvice(NextAction.REFILL_WATER, -1, decide(run, 2, 0));
+	}
+
+	@Test
 	public void refillsInsteadOfPlantingASeedItCannotWater()
 	{
 		List<PlotInfo> run = plots(plot(STAGE2_WET), plot(EMPTY));
