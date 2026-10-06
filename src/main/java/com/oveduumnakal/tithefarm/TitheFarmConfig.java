@@ -372,6 +372,32 @@ public interface TitheFarmConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "blockWrongPlant",
+		name = "Prevent planting wrong plot",
+		description = "Move \"Cancel\" to the top of the plant menu on any plot except the route's next one, so "
+			+ "seeds only go in route order. Never removes options.",
+		section = guidanceSection,
+		position = 7
+	)
+	default boolean blockWrongPlant()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "blockOutOfOrderWater",
+		name = "Prevent watering out of order",
+		description = "While the next action is watering, move \"Cancel\" to the top of the menu on every other "
+			+ "plant, so the highlighted plant is watered first. Never removes options.",
+		section = guidanceSection,
+		position = 8
+	)
+	default boolean blockOutOfOrderWater()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "showSession",
 		name = "Show tonight's progress",
 		description = "Show points earned, experience gained, and time spent this session in the panel.",

@@ -28,16 +28,22 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import net.runelite.api.Client;
+import net.runelite.api.GameObject;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.Point;
 
 /**
- * Guards against starting or growing a run the player cannot finish watering. When enabled, the menu contains a
- * plant action on an empty plot, and the water carried would not cover what the crops already in the ground
- * still need plus three for every seed the run still has room for, {@code "Cancel"} is moved to the top so a
- * stray left-click cancels rather than sinks a seed. The need is read from the plots, so watering mid-run never
- * trips it falsely.
+ * Guards against clicks that would break the run, by moving {@code "Cancel"} to the top of the menu so a stray
+ * left-click cancels instead. Three guards, each with its own setting:
+ * <ul>
+ * <li>Low water: a plant action on an empty plot while the water carried would not cover what the crops already
+ * in the ground still need plus three for every seed the run still has room for. The need is read from the
+ * plots, so watering mid-run never trips it falsely.</li>
+ * <li>Wrong plot: a plant action on any plot but the route's next one, so seeds go in route order.</li>
+ * <li>Out-of-order water: while the next action is watering, a click on any other unwatered plant.</li>
+ * </ul>
  * It only ever reorders — no entry is removed — mirroring the Cancel-to-top guard in the Goat Pit Indicators
  * plugin. Runs every frame on {@code PostMenuSort} so it fixes both the left-click default and the right-click
  * ordering.
@@ -59,15 +65,16 @@ class TitheMenuSwapper
 		this.run = run;
 	}
 
-	/** Applies the Cancel-to-top guard when water is short and a plant action is present. */
+	/** Applies the Cancel-to-top guard when the menu holds a plant or water click a guard forbids. */
 	void onPostMenuSort()
 	{
-		if (!config.blockPlantWhenShort() || !plotTracker.inTitheFarm())
+		boolean anyGuard = config.blockPlantWhenShort() || config.blockWrongPlant() || config.blockOutOfOrderWater();
+		if (!anyGuard || !plotTracker.inTitheFarm())
 			return;
 
 		Menu menu = client.getMenu();
 		MenuEntry[] entries = menu.getMenuEntries();
-		if (entries.length < 2 || !hasPlantOnEmptyPlot(entries) || run.snapshot().canAffordPlant())
+		if (entries.length < 2 || !hasBlockedEntry(entries))
 			return;
 
 		MenuEntry cancel = firstOfType(entries, MenuAction.CANCEL);
@@ -75,16 +82,79 @@ class TitheMenuSwapper
 			menu.setMenuEntries(promoteToTop(entries, cancel));
 	}
 
-	/** Whether the menu contains an interaction with an empty plot — the click that would plant a seed. */
-	private static boolean hasPlantOnEmptyPlot(MenuEntry[] entries)
+	/** Whether any entry is a plant or water click that an enabled guard forbids. */
+	private boolean hasBlockedEntry(MenuEntry[] entries)
 	{
 		for (MenuEntry entry : entries)
 		{
 			if (isPlantEntry(entry.getType(), entry.getIdentifier()))
-				return true;
+			{
+				if (blocksPlant(entry, run.snapshot()))
+					return true;
+			}
+			else if (isWaterEntry(entry.getType(), entry.getIdentifier()))
+			{
+				if (blocksWater(entry, run.snapshot()))
+					return true;
+			}
 		}
 
 		return false;
+	}
+
+	/** Whether a plant click is forbidden: water is short, or the plot is not the route's next one. */
+	private boolean blocksPlant(MenuEntry entry, RunSnapshot snapshot)
+	{
+		if (config.blockPlantWhenShort() && !snapshot.canAffordPlant())
+			return true;
+
+		return config.blockWrongPlant() && !snapshot.isRecording() && !isOn(entry, nextPlantPlot(snapshot));
+	}
+
+	/** Whether a water click is forbidden: the next action waters a different plant. */
+	private boolean blocksWater(MenuEntry entry, RunSnapshot snapshot)
+	{
+		if (!config.blockOutOfOrderWater() || snapshot.getAdvice().getAction() != NextAction.WATER_PLANT)
+			return false;
+
+		return !isOn(entry, snapshot.getTargetPlot());
+	}
+
+	/**
+	 * The route plot the next seed belongs in: the earliest route plot still needing one.
+	 *
+	 * @param snapshot the current run
+	 * @return that plot, or {@code null} when every route plot is planted
+	 */
+	static GameObject nextPlantPlot(RunSnapshot snapshot)
+	{
+		for (int i = 0; i < snapshot.getRouteLength(); i++)
+		{
+			if (snapshot.getPlots().get(i).needsSeed())
+				return snapshot.plotAt(i);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Whether a menu entry targets the given plot. Object entries carry the scene tile clicked in their params,
+	 * which lies within the plot's footprint.
+	 *
+	 * @param entry the menu entry
+	 * @param plot  the plot, or {@code null}
+	 * @return true when the entry's tile is on the plot
+	 */
+	static boolean isOn(MenuEntry entry, GameObject plot)
+	{
+		if (plot == null)
+			return false;
+
+		Point min = plot.getSceneMinLocation();
+		Point max = plot.getSceneMaxLocation();
+		int x = entry.getParam0();
+		int y = entry.getParam1();
+		return x >= min.getX() && x <= max.getX() && y >= min.getY() && y <= max.getY();
 	}
 
 	/**
@@ -97,9 +167,25 @@ class TitheMenuSwapper
 	 */
 	static boolean isPlantEntry(MenuAction type, int identifier)
 	{
-		if (identifier != TitheFarmIds.PLOT_EMPTY)
-			return false;
+		return identifier == TitheFarmIds.PLOT_EMPTY && isObjectClick(type);
+	}
 
+	/**
+	 * Whether a menu entry's type and identifier mark a click on an unwatered plant: its own option or a "use
+	 * item on object" aimed at it, which is how a watering can is used.
+	 *
+	 * @param type       the entry's menu action
+	 * @param identifier the entry's identifier, which for object entries is the object id
+	 * @return true when the entry would water a plant
+	 */
+	static boolean isWaterEntry(MenuAction type, int identifier)
+	{
+		return TithePlotState.fromObjectId(identifier) == TithePlotState.UNWATERED && isObjectClick(type);
+	}
+
+	/** Whether a menu action is a game-object option or an item used on a game object. */
+	private static boolean isObjectClick(MenuAction type)
+	{
 		switch (type)
 		{
 			case GAME_OBJECT_FIRST_OPTION:

@@ -99,6 +99,14 @@ a seed you cannot finish watering.
   One switch strips everything back to the warnings that matter and the current plot alone — no fading
   trail and no inventory boxes.
 
+- **Stay on the route**
+
+  Plant a route plot out of order and the route keeps its shape: the plot you skipped stays next, so you
+  double back to it. Two guards keep clicks in order, each moving "Cancel" to the top of the menu (nothing is
+  removed). **Prevent watering out of order** (on by default) guards every plant but the highlighted one while
+  the next action is watering. **Prevent planting wrong plot** (off by default) guards every plot but the
+  route's next one.
+
 ### Never run dry
 
 - **Water tracking**
