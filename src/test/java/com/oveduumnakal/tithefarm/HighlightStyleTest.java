@@ -30,11 +30,12 @@ import java.awt.image.BufferedImage;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/** Checks the trail fade, the glow pulse, color scaling, and the step-number text. */
+/** Checks the trail fade, the glow pulse, color scaling, and the step markers: number text and blips. */
 public class HighlightStyleTest
 {
 	private static final double EPSILON = 1e-9;
@@ -85,6 +86,35 @@ public class HighlightStyleTest
 		assertTrue(contains(image, Color.BLACK.getRGB()));
 		assertTrue(visible(image));
 		assertFalse(visible(textImage(color, 0)));
+	}
+
+	@Test
+	public void blipsAreARowCentredOnTheMarkerPoint()
+	{
+		assertArrayEquals(new int[]{48}, HighlightStyle.blipLefts(1, 50));
+		assertArrayEquals(new int[]{45, 51}, HighlightStyle.blipLefts(2, 50));
+		assertArrayEquals(new int[]{36, 42, 48, 54, 60}, HighlightStyle.blipLefts(5, 50));
+		assertArrayEquals(new int[0], HighlightStyle.blipLefts(0, 50));
+	}
+
+	@Test
+	public void blipsAreDrawnOverADarkShadowAndFadeWithTheStrength()
+	{
+		Color color = new Color(255, 212, 0);
+		BufferedImage image = blipImage(color, 1);
+		assertTrue(contains(image, color.getRGB()));
+		assertTrue(contains(image, Color.BLACK.getRGB()));
+		assertFalse(visible(blipImage(color, 0)));
+	}
+
+	/** A small transparent image with three blips drawn on it at the given strength. */
+	private static BufferedImage blipImage(Color color, double strength)
+	{
+		BufferedImage image = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D graphics = image.createGraphics();
+		HighlightStyle.drawBlips(graphics, 3, 12, 12, color, strength);
+		graphics.dispose();
+		return image;
 	}
 
 	/** A small transparent image with {@code 8} written on it at the given strength. */

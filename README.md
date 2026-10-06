@@ -55,12 +55,12 @@ a seed you cannot finish watering.
   Mid-run, the plugin only sends you to the sack, and lights it, when a harvest would not fit; with no fruit to
   deposit, it asks you to free a slot instead.
 
-- **Step numbers**
+- **Step markers**
 
-  Each highlighted plot carries a small number on its north-east tile: 1 for the plot to click now, then 2 to
-  5 for the ones after it. The number is drawn in its plot's color and glows and fades with the border. If a
-  plot comes up twice in the trail, both numbers are shown, e.g. 1,2. In minimal view only the current plot's
-  1 is shown. Turn **Show step numbers** off to hide them.
+  Each highlighted plot carries a small marker on its north-east tile: 1 for the plot to click now, then 2 to
+  5 for the ones after it. Pick **Numbers** (the default) to write the digit, **Blips** for that many small
+  dots, or **Off** to hide them. The marker is drawn in its plot's color and glows and fades with the border.
+  In minimal view only the current plot's marker is shown.
 
 - **Glow**
 

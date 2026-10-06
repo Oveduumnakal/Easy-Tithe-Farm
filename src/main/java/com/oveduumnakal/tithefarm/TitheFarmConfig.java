@@ -51,6 +51,12 @@ public interface TitheFarmConfig extends Config
 	/** Key of the hidden saved route, encoded by {@link RouteRecorder#encode}. */
 	String RECORDED_ROUTE = "recordedRoute";
 
+	/** Key of the step-marker setting, written by the plugin when it carries over the old step-numbers box. */
+	String STEP_MARKERS = "stepMarkers";
+
+	/** Key of the old step-numbers checkbox that {@link #STEP_MARKERS} replaced; only read to migrate it. */
+	String LEGACY_STEP_NUMBERS = "showStepNumbers";
+
 	/** How many crops to run at a time — drives the route length and the water math. */
 	@ConfigSection(
 		name = "Run",
@@ -165,16 +171,16 @@ public interface TitheFarmConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "showStepNumbers",
-		name = "Show step numbers",
-		description = "Write each highlighted plot's place in the order (1 to 5) on its north-east tile, glowing with "
-			+ "its border.",
+		keyName = STEP_MARKERS,
+		name = "Step markers",
+		description = "Mark each highlighted plot's place in the order on its north-east tile, glowing with its "
+			+ "border: the number 1 to 5, or that many blips.",
 		section = guidanceSection,
 		position = 3
 	)
-	default boolean showStepNumbers()
+	default StepMarker stepMarkers()
 	{
-		return true;
+		return StepMarker.NUMBERS;
 	}
 
 	@ConfigItem(
