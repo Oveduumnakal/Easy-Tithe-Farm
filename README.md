@@ -121,8 +121,9 @@ a seed you cannot finish watering.
 
   Tick the Farmer Gricoller rewards you are saving for, with a quantity for the repeatable ones like seed packs
   or herb boxes. A goal box at the farm and in the lobby shows the combined cost, your progress, a points bar,
-  and roughly how many runs are left at your crop count. It warns if the total is more than the 16,000 points
-  you can hold.
+  and roughly how many runs are left at your crop count, counting the fruit in your backpack as if deposited.
+  It reads "deposit" when depositing that fruit is all you still need, and "ready!" once your points cover the
+  goal. It warns if the total is more than the 16,000 points you can hold.
 
 - **Goal notification**
 

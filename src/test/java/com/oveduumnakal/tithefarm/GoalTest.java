@@ -152,6 +152,48 @@ public class GoalTest
 	}
 
 	@Test
+	public void carriedFruitLowersRunsLeft()
+	{
+		when(config.trackGricollersCan()).thenReturn(true);
+		assertEquals(29, Goal.of(config, 0).getRunsLeft());
+		assertEquals(28, Goal.of(config, 0, 7).getRunsLeft());
+		assertEquals(27, Goal.of(config, 0, 14).getRunsLeft());
+		assertEquals("~27", RewardGoalOverlay.runsLeft(Goal.of(config, 0, 14)));
+	}
+
+	@Test
+	public void runsLeftReachesZeroWhenCarriedFruitCoversTheTotal()
+	{
+		when(config.trackStrawhat()).thenReturn(true);
+		Goal goal = Goal.of(config, 60, 15);
+		assertEquals(0, goal.getRunsLeft());
+		assertFalse(goal.isAffordable());
+		assertTrue(goal.needsDeposit());
+		assertEquals("deposit", RewardGoalOverlay.runsLeft(goal));
+	}
+
+	@Test
+	public void readyOnlyOnceTheSpendablePointsCoverTheTotal()
+	{
+		when(config.trackStrawhat()).thenReturn(true);
+		Goal goal = Goal.of(config, 75, 10);
+		assertTrue(goal.isAffordable());
+		assertFalse(goal.needsDeposit());
+		assertEquals("ready!", RewardGoalOverlay.runsLeft(goal));
+		Goal shortOfIt = Goal.of(config, 60, 14);
+		assertFalse(shortOfIt.needsDeposit());
+		assertEquals("~1", RewardGoalOverlay.runsLeft(shortOfIt));
+	}
+
+	@Test
+	public void pointsPerRunAveragesTheFullSackBonus()
+	{
+		assertEquals(0.35, DepositRewards.pointsPerFruit(), 1e-9);
+		assertEquals(7.0, Goal.pointsPerRun(20), 1e-9);
+		assertEquals(35, DepositRewards.points(0, 100));
+	}
+
+	@Test
 	public void pendingPointsStopAtThePointsCap()
 	{
 		when(config.trackStrawhat()).thenReturn(true);

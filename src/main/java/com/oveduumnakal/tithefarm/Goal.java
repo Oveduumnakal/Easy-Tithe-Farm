@@ -207,10 +207,25 @@ final class Goal
 		return total > POINTS_CAP;
 	}
 
-	/** Runs of the configured crop count still needed, 0 once affordable. */
+	/**
+	 * Whether a reward is ticked and the points cover the total only once the carried fruit is deposited.
+	 *
+	 * @return true when depositing would make the goal affordable, false when it already is or still falls short
+	 */
+	boolean needsDeposit()
+	{
+		return !isEmpty() && !isAffordable() && points + pending >= total;
+	}
+
+	/**
+	 * Runs of the configured crop count still needed, counting the carried fruit as deposited: fruit stays in the
+	 * backpack between runs until a full sack's worth is carried, so the spendable points alone lag behind.
+	 *
+	 * @return the runs needed, 0 once the points and the carried fruit cover the total
+	 */
 	int getRunsLeft()
 	{
-		return runsToGoal(points, total, cropCount);
+		return runsToGoal(points + pending, total, cropCount);
 	}
 
 	/**
@@ -268,7 +283,7 @@ final class Goal
 	/**
 	 * Runs still needed to afford a cost.
 	 *
-	 * @param points    the spendable points now
+	 * @param points    the points now, with any the carried fruit would add
 	 * @param cost      the cost
 	 * @param cropCount the plants per run
 	 * @return the runs needed, 0 when already affordable
