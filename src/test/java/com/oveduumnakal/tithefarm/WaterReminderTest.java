@@ -61,7 +61,7 @@ public class WaterReminderTest
 	private void water(int carried, int needed)
 	{
 		RunSnapshot snapshot = new RunSnapshot(TestRuns.listOf(TestRuns.plot(27383, 1L)), 1,
-			TestRuns.listOf(PlotInfo.of(27383, 0)), carried, 20, needed, true,
+			TestRuns.listOf(PlotInfo.of(27383, 0)), carried, needed, true,
 			new ActionAdvisor.Advice(NextAction.WAIT, -1), false, 0, RunStatus.NEUTRAL,
 			Collections.emptyList());
 		when(run.snapshot()).thenReturn(snapshot);

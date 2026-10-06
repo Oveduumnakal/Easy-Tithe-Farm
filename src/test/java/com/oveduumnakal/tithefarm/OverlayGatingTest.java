@@ -83,7 +83,7 @@ public class OverlayGatingTest
 		RunStatus status = new RunStatus(false, Integer.MAX_VALUE, 0, Collections.emptyList(), false, 100, carried,
 			0, true);
 		return new RunSnapshot(TestRuns.listOf(TestRuns.plot(plotId, 1L)), 1, TestRuns.listOf(PlotInfo.of(plotId, 0)),
-			60, 0, 0, true, new ActionAdvisor.Advice(NextAction.DEPOSIT_FRUIT, -1), false, 0, status,
+			60, 0, true, new ActionAdvisor.Advice(NextAction.DEPOSIT_FRUIT, -1), false, 0, status,
 			Collections.emptyList());
 	}
 

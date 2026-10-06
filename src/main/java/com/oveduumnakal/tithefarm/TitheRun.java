@@ -239,7 +239,7 @@ class TitheRun
 		}
 
 		int runNeed = WaterTracker.runNeed(plots, plantLimit);
-		return new RunSnapshot(route, routeLength, plots, water, seeds, runNeed,
+		return new RunSnapshot(route, routeLength, plots, water, runNeed,
 			WaterTracker.canAffordPlant(plots, water, plantLimit), advice, recording, recorder.getRecording().size(),
 			status, trail);
 	}
