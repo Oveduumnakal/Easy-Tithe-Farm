@@ -40,7 +40,8 @@ import java.util.function.Predicate;
  * <li>Between runs — nothing growing — deposit before the next seed goes in once 100 or more fruit is carried.
  * A smaller haul stays in the backpack, and fruit is never deposited mid-run unless a harvest would not fit.</li>
  * <li>Unless a plant is grown, take the next plot in the route that needs a seed: clear it if its plant died,
- * otherwise plant it — or refill first when the water would not cover the rest of the run.</li>
+ * otherwise plant it. When the water would not cover the rest of the run, spend what is carried on plants
+ * waiting for water first, then refill.</li>
  * <li>Water any other plant waiting for this stage's water.</li>
  * <li>Harvest a grown plant whose fruit fits in the backpack. When none fits, deposit to make room, or free a
  * slot when there is no fruit to deposit.</li>
@@ -93,6 +94,7 @@ final class ActionAdvisor
 
 		int grown = indexOf(plots, plot -> plot.getState() == TithePlotState.GROWN);
 		int open = indexOf(plots, PlotInfo::needsSeed);
+		int unwatered = earliestPlanted(plots, plot -> plot.getState() == TithePlotState.UNWATERED);
 		if (grown < 0 && open >= 0 && seeds > 0 && plantLimit > 0)
 		{
 			if (plots.get(open).getState() == TithePlotState.DEAD)
@@ -101,10 +103,12 @@ final class ActionAdvisor
 			if (WaterTracker.canAffordPlant(plots, water, plantLimit))
 				return new Advice(NextAction.PLANT_SEED, open);
 
+			if (unwatered >= 0 && water > 0)
+				return new Advice(NextAction.WATER_PLANT, unwatered);
+
 			return new Advice(NextAction.REFILL_WATER, -1);
 		}
 
-		int unwatered = earliestPlanted(plots, plot -> plot.getState() == TithePlotState.UNWATERED);
 		if (unwatered >= 0)
 			return water(unwatered, water);
 

@@ -104,7 +104,8 @@ a seed you cannot finish watering.
   and the water barrels glow blue, and the first seed waits until every can is full. If your water will not
   finish a run already under way, the panel turns red and the cans and barrels glow blue, and a notification
   fires once so you catch it even while tabbed out. It is on by default and follows RuneLite's usual
-  notification settings (tray, sound, focus, and so on).
+  notification settings (tray, sound, focus, and so on). When the water runs short mid-pass, the next action
+  first spends what you carry on plants waiting for water, then sends you to the barrel.
 
 - **Prevent planting (low water)**
 

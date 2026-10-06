@@ -177,6 +177,16 @@ public class ActionForecastTest
 	}
 
 	@Test
+	public void shortOfWaterWatersWaitingPlantsUntilTheRefill()
+	{
+		List<PlotInfo> plots = run(3, 20, EMPTY);
+		plots.set(0, PlotInfo.of(STAGE3_DRY, 10, 10, 200));
+		plots.set(1, PlotInfo.of(STAGE3_DRY, 10, 10, 150));
+		List<ActionAdvisor.Advice> trail = ActionForecast.forecast(plots, 18, 2, Backpack.ROOMY, 18, 5);
+		assertTrail(trail, NextAction.WATER_PLANT, 1, NextAction.WATER_PLANT, 2);
+	}
+
+	@Test
 	public void harvestFollowsPlantingOrder()
 	{
 		List<PlotInfo> plots = new ArrayList<>();
