@@ -164,23 +164,13 @@ public class TitheRunTest
 	}
 
 	@Test
-	public void lastRunPlantsOnlyEnoughForTheNextHundred()
+	public void theFruitDepositedNeverShortensTheRun()
 	{
-		when(config.wrapUp()).thenReturn(true);
 		when(client.getVarbitValue(TitheFarmIds.SCORE_VARBIT)).thenReturn(88);
 		RunSnapshot snapshot = run.snapshot();
-		assertEquals(12, snapshot.getStatus().getPlantLimit());
 		assertEquals(88, snapshot.getStatus().getDeposited());
-		assertEquals(12 * 3, snapshot.getRunNeed());
-	}
-
-	@Test
-	public void lastRunWithNothingLeftSaysLeave()
-	{
-		when(config.wrapUp()).thenReturn(true);
-		when(client.getVarbitValue(TitheFarmIds.SCORE_VARBIT)).thenReturn(40);
-		RunSnapshot snapshot = run.snapshot();
-		assertEquals(NextAction.LEAVE, snapshot.getAdvice().getAction());
+		assertEquals(20 * 3, snapshot.getRunNeed());
+		assertEquals(NextAction.PLANT_SEED, snapshot.getAdvice().getAction());
 	}
 
 	@Test

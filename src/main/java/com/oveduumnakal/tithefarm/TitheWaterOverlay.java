@@ -39,7 +39,7 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
  * with what the carried fruit would add, tonight's time and experience, and the progress of a route recording.
  * Drawn only at the Tithe Farm. The next-action line
  * doubles as a hint when the target is not in view, such as the seed table outside the farm. In minimal view the
- * panel keeps only the next action, the last-run line, a recording in progress, and the red warnings.
+ * panel keeps only the next action, a recording in progress, and the red warnings.
  */
 class TitheWaterOverlay extends OverlayPanel
 {
@@ -76,15 +76,6 @@ class TitheWaterOverlay extends OverlayPanel
 			.build());
 		RunStatus status = snapshot.getStatus();
 		boolean minimal = config.minimalView();
-
-		if (status.isWrapUp())
-		{
-			panelComponent.getChildren().add(LineComponent.builder()
-				.left("Last run")
-				.right(wrapUpText(snapshot))
-				.rightColor(config.nextActionColor())
-				.build());
-		}
 
 		if (!minimal || warn)
 		{
@@ -170,16 +161,6 @@ class TitheWaterOverlay extends OverlayPanel
 			.left("Tonight")
 			.right(TitheTime.format(session.ticksInFarm()) + "  " + xp + " xp")
 			.build());
-	}
-
-	/** What the last run still asks for: a few more seeds, finishing up, or leaving. */
-	private static String wrapUpText(RunSnapshot snapshot)
-	{
-		if (snapshot.getAdvice().getAction() == NextAction.LEAVE)
-			return "done, leave";
-
-		int seeds = snapshot.getStatus().getPlantLimit();
-		return seeds > 0 ? "plant " + seeds + " more" : "finish up";
 	}
 
 	/** The next-action word, with the route number for a plot action. */

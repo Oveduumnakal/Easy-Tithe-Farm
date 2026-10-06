@@ -83,7 +83,7 @@ public class InventoryCheckTest
 	@Test
 	public void energyWarningRespectsItsThreshold()
 	{
-		RunStatus tired = new RunStatus(false, 0, 0, Collections.emptyList(), false, 12, 0, 0, true);
+		RunStatus tired = new RunStatus(0, Collections.emptyList(), false, 12, 0, 0, true);
 		assertTrue(tired.isEnergyLow(20));
 		assertFalse(tired.isEnergyLow(10));
 		assertFalse("0 turns it off", tired.isEnergyLow(0));

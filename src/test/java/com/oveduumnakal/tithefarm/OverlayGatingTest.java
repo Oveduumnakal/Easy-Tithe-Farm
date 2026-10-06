@@ -80,8 +80,7 @@ public class OverlayGatingTest
 	/** A snapshot advising a deposit, over one plot of the given id, with the given fruit carried. */
 	private static RunSnapshot depositAdvice(int plotId, int carried)
 	{
-		RunStatus status = new RunStatus(false, Integer.MAX_VALUE, 0, Collections.emptyList(), false, 100, carried,
-			0, true);
+		RunStatus status = new RunStatus(0, Collections.emptyList(), false, 100, carried, 0, true);
 		return new RunSnapshot(TestRuns.listOf(TestRuns.plot(plotId, 1L)), 1, TestRuns.listOf(PlotInfo.of(plotId, 0)),
 			60, 0, 0, true, new ActionAdvisor.Advice(NextAction.DEPOSIT_FRUIT, -1), false, 0, status,
 			Collections.emptyList());

@@ -66,9 +66,6 @@ public class TitheFarmPlugin extends Plugin
 	private TitheFarmConfig config;
 
 	@Inject
-	private ConfigManager configManager;
-
-	@Inject
 	private TithePlotTracker tracker;
 
 	@Inject
@@ -139,17 +136,10 @@ public class TitheFarmPlugin extends Plugin
 		waterReminder.reset();
 	}
 
-	private boolean wasInFarm;
-
-	/** Runs the per-tick checks, and switches "Last run" off once the player has left the farm. */
+	/** Runs the per-tick checks. */
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		boolean inFarm = tracker.inTitheFarm();
-		if (wasInFarm && !inFarm && config.wrapUp())
-			configManager.setConfiguration(TitheFarmConfig.GROUP, TitheFarmConfig.WRAP_UP, false);
-
-		wasInFarm = inFarm;
 		waterReminder.onTick();
 		deathWarner.onTick();
 		session.onTick();

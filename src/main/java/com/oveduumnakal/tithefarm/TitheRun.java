@@ -204,29 +204,15 @@ class TitheRun
 		Backpack backpack = Backpack.of(ids, counts, fruitStacks());
 		int slots = ActionAdvisor.plantSlots(plots, config.cropCount());
 		int deposited = client.getVarbitValue(TitheFarmIds.SCORE_VARBIT);
-		boolean wrapUp = config.wrapUp();
-		int plantLimit = slots;
-		if (wrapUp)
-		{
-			int planted = 0;
-			for (PlotInfo plot : plots)
-			{
-				if (!plot.needsSeed())
-					planted++;
-			}
-
-			plantLimit = ActionAdvisor.wrapUpSeeds(deposited, fruit, planted, slots);
-		}
-
 		List<String> missingTools = config.inventoryCheck()
 			? InventoryCheck.missing(ids, config.barehandedPlanting())
 			: Collections.emptyList();
 		boolean fertiliser = config.inventoryCheck() && InventoryCheck.hasFertiliser(ids);
 		int energy = client.getEnergy() / ENERGY_SCALE;
 		boolean cansFull = WaterTracker.cansFull(ids, gricollerCharges);
-		RunStatus status = new RunStatus(wrapUp, plantLimit, deposited, missingTools, fertiliser, energy, fruit,
+		RunStatus status = new RunStatus(deposited, missingTools, fertiliser, energy, fruit,
 			DepositRewards.xp(deposited, ids, counts, DepositRewards.outfitBoost(wornIds())), cansFull);
-		ActionAdvisor.Advice decided = ActionAdvisor.decide(plots, seeds, water, backpack, plantLimit, wrapUp);
+		ActionAdvisor.Advice decided = ActionAdvisor.decide(plots, seeds, water, backpack, slots);
 		boolean betweenRuns = RunSnapshot.nothingGrowing(plots);
 		ActionAdvisor.Advice advice = config.waterRefillWarning()
 			? ActionAdvisor.topUpFirst(decided, betweenRuns, cansFull)
@@ -235,12 +221,12 @@ class TitheRun
 		if (advice.getPlotIndex() >= 0)
 		{
 			int length = config.minimalView() ? 1 : ActionForecast.TRAIL_LENGTH;
-			trail = ActionForecast.forecast(plots, seeds, water, backpack, plantLimit, wrapUp, length);
+			trail = ActionForecast.forecast(plots, seeds, water, backpack, slots, length);
 		}
 
-		int runNeed = WaterTracker.runNeed(plots, plantLimit);
+		int runNeed = WaterTracker.runNeed(plots, slots);
 		return new RunSnapshot(route, routeLength, plots, water, seeds, runNeed,
-			WaterTracker.canAffordPlant(plots, water, plantLimit), advice, recording, recorder.getRecording().size(),
+			WaterTracker.canAffordPlant(plots, water, slots), advice, recording, recorder.getRecording().size(),
 			status, trail);
 	}
 
