@@ -92,9 +92,6 @@ public class TitheFarmPluginLifecycleTest
 	private RouteRecorder recorder;
 
 	@Mock
-	private TitheLayoutLogger layoutLogger;
-
-	@Mock
 	private TitheRun run;
 
 	@Mock
@@ -274,7 +271,6 @@ public class TitheFarmPluginLifecycleTest
 		assertSame(table, tracker.getSeedTable());
 		verify(run).reset();
 		verify(deathWarner).reset();
-		verify(layoutLogger).requestDump();
 		verify(recorder, never()).onPlanted(any());
 	}
 

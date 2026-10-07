@@ -35,9 +35,6 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.Item;
@@ -69,8 +66,6 @@ class TitheRun
 	private final TitheFarmConfig config;
 	private final TithePlotTracker tracker;
 	private final RouteRecorder recorder;
-
-	private static final Logger log = LoggerFactory.getLogger(TitheRun.class);
 
 	/** {@link Client#getEnergy()} reports hundredths of a percent. */
 	private static final int ENERGY_SCALE = 100;
@@ -261,8 +256,6 @@ class TitheRun
 
 		adapted = points;
 		cached = null;
-		log.debug("{} off-route plant at {} took route place {} -> {}", TitheLayoutLogger.TAG, tile,
-			next >= 0 ? next + 1 : order.size(), RouteRecorder.encode(points));
 	}
 
 	/** Forgets the adapted route, for a scene reload or a route-settings change. Call only on the client thread. */

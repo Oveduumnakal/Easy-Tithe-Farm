@@ -82,9 +82,6 @@ public class TitheFarmPlugin extends Plugin
 	private RouteRecorder recorder;
 
 	@Inject
-	private TitheLayoutLogger layoutLogger;
-
-	@Inject
 	private TitheRun run;
 
 	@Inject
@@ -140,7 +137,6 @@ public class TitheFarmPlugin extends Plugin
 		overlayManager.add(timerOverlay);
 		overlayManager.add(goalOverlay);
 		waterReminder.reset();
-		layoutLogger.requestDump();
 		session.reset();
 		goals.reset();
 		clientThread.invokeLater(this::restoreScene);
@@ -184,7 +180,6 @@ public class TitheFarmPlugin extends Plugin
 		deathWarner.onTick();
 		session.onTick();
 		goals.onTick();
-		layoutLogger.onTick();
 	}
 
 	@Subscribe
@@ -229,9 +224,6 @@ public class TitheFarmPlugin extends Plugin
 	{
 		GameObject object = event.getGameObject();
 		int previous = tracker.onSpawnOrChanged(object, client.getTickCount());
-		if (TitheFarmIds.isPlot(object.getId()))
-			layoutLogger.onPlotChanged(object, previous);
-
 		if (previous == TitheFarmIds.PLOT_EMPTY && TithePlotState.isFreshSeed(object.getId()))
 		{
 			WorldPoint tile = TithePlotTracker.templateTile(object);
@@ -318,7 +310,6 @@ public class TitheFarmPlugin extends Plugin
 		}
 		else if (state == GameState.LOGGED_IN)
 		{
-			layoutLogger.requestDump();
 			onAccountLoggedIn(client.getAccountHash());
 		}
 	}
