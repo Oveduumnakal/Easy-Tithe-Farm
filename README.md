@@ -3,145 +3,95 @@
 </p>
 <h1 align="center">Easy Tithe Farm</h1>
 
-Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a follow-the-lights run:
-it plans an efficient planting route for the number of crops you want to grow (or the one you record),
-lights up what to click next in a color that says what to do, tracks your water, and stops you from planting
-a seed you cannot finish watering.
+Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a follow-the-lights run. It lights up the plot to click next in a color that tells you what to do there, keeps count of your water so you never run dry, and warns you before a plant dies. Pick how many crops you want to grow and just follow the glow.
 
 ## Features
 
-### Plan the run
-
-- **Wiki planting routes**
-
-  The routes from the OSRS Wiki strategy guide are built in — basic (20), combo (20), and simple (23) — and
-  they set the order the plots light up in. Set your crop count and the route is cut to it (the wiki's basic
-  route works at 16 too). Prefer something else? The automatic route loops down one pair of columns and back
-  up the next, sized to your crop count, so you always finish beside your first plot.
-
-- **Adapts to how you plant**
-
-  Plant somewhere other than the highlighted plot and the route keeps its shape. Skip a route plot and it stays
-  next, so you double back to it. Plant a plot off the route and it takes the place of the plot you skipped,
-  while the route's last plot drops out to keep your crop count. The route then stays put — through every
-  harvest and replant round.
-
-- **Record your own route**
-
-  Prefer your own order? Turn on **Record route**, plant a run the way you like, and the plugin saves that
-  order and switches to it once you have planted your crop count. It survives every new farm instance.
-
 ### Know what to click next
 
-- **Brain-off highlights**
+- **Follow the lights**
 
-  The plot to click now and the next four after it are lit up, brightest first and fading evenly
-  (100%, 78%, 55%, 33%, 10%). Each plot appears once, at its nearest action, in your route's order. The
-  current plot is always exact; the fading trail is a prediction that assumes about three game ticks per
-  action and plants growing on schedule. Every seed is watered as it goes in, and the plugin keeps you on
-  your planting pass until a plant actually needs you, instead of dragging you back the moment it grows.
+  The plot to click now glows brightest, and the next four plots glow after it, each one a little fainter. Click the bright one, and the next one takes its place. You never have to remember where you are in your run.
 
 - **Colors that say what to do**
 
-  Plant is yellow, water is blue, harvest is green, clear dead is red, and deposit is gold-orange. When you
-  plant, the seed in your backpack glows yellow with the plot; when you water, a filled watering can glows
-  blue with it. Carrying 100 or more fruit, the fruit stack and both sacks glow gold-orange. Anything else,
-  like the sacks when a full backpack needs emptying mid-run, is white. Each highlight outlines the whole plot;
-  only the plot to click now is also lightly filled, so it stands out from the ones after it.
-  Inventory items are traced along their own outline. Every color can be changed in the Colors section.
-
-  Fruit is deposited in batches of 100, between runs like the water refill: once you carry 100 or more and
-  nothing is growing, the sacks light up before the first seed goes in. A smaller haul stays in your backpack.
-  Mid-run, the plugin only sends you to the sack, and lights it, when a harvest would not fit; with no fruit to
-  deposit, it asks you to free a slot instead.
+  Green means plant, blue means water, yellow means harvest, and red means clear a dead plant. When it's time to plant, the seed in your backpack glows green too, and when it's time to water, your watering can glows blue. Once you carry 100 or more fruit, the fruit and the sacks glow orange so you know to drop them off between runs. You can change any color in the settings.
 
 - **Step markers**
 
-  Each highlighted plot carries a small marker on its north-east tile: 1 for the plot to click now, then 2 to
-  5 for the ones after it. Pick **Numbers** (the default) to write the digit, **Blips** for that many small
-  dots, or **Off** to hide them. The marker is drawn in its plot's color and glows and fades with the border.
-  In minimal view only the current plot's marker is shown.
+  Each glowing plot shows its place in line: 1 for the plot to click now, then 2 to 5 for the ones after it. Pick **Numbers**, **Blips** (that many small dots), or **Off** in the settings.
+
+  <img src="docs/img/01-highlights.png" alt="Glowing plots numbered 1 to 5: blue to water now, then green to plant next" width="270"> <img src="docs/img/02-blips.png" alt="Glowing plots marked with one to five small dots instead of numbers" width="270">
 
 - **Glow**
 
-  All highlights pulse together. Pick Slow (2.4 s), Medium (1.2 s, the default), Fast (0.6 s), or Solid for
-  no pulse.
+  All the highlights gently pulse together. Make the pulse slow, medium, or fast, or turn it off for a steady glow.
 
-- **Run panel**
+### Never run out of water
 
-  A small panel shows the next action, the water you carry, and the water the run still needs.
+- **Water counted for you**
+
+  A small panel shows the next thing to do, how much water you carry, and how much the rest of your run needs. It counts both regular watering cans and Gricoller's can.
+
+- **Refill reminder**
+
+  Between runs, any watering can that isn't full glows blue along with the water barrels, and the plugin waits for you to fill up before the first seed goes in. If your plants ever need more water than you carry, the panel turns red and you get a notification, even if you're tabbed out.
+
+  <img src="docs/img/03-refill.png" alt="Watering cans in the backpack and the water barrels glowing blue between runs" width="262">
+
+- **No wasted seeds**
+
+  If you don't have enough water to finish growing another seed, the plugin stops you from planting it by mistake. You can turn this off with **Prevent planting (low water)**.
 
 ### Play tired, play safe
 
 - **Plant timers**
 
-  A countdown sits over every plant waiting for water, turning yellow, then red, as it gets close — and an
-  optional notification fires before one dies, for when life pulls you away mid-run.
+  A countdown sits over every plant waiting for water and turns yellow, then red, as time runs out. Turn on **Notify before a plant dies** to get a heads-up if you get pulled away mid-run.
 
-- **Tonight's progress**
+  <img src="docs/img/04-timers.png" alt="A countdown timer over a plant waiting for water, its plot glowing blue" width="290">
 
-  Your points, experience gained this session (XP), and time in the farm (Time), each on its own line of the
-  run panel. The points and experience each show a (+n) for what the fruit in your backpack would add once
-  deposited, using the wiki's sack rules: a point for
-  every third fruit in the sack, 2 more at the 100th (35 per full sack), and double experience from the 75th
-  fruit plus its flat bonus. The Farmer's outfit pieces you wear are counted (up to 2.5% for the full set).
-  The session starts with the plugin and starts over when you log in on a different account; a world hop keeps
-  it.
+- **Tool check**
 
-- **Tool check and run energy**
-
-  A red warning if your spade, seed dibber, or watering can is missing, if Gricoller's fertiliser is in your
-  backpack, or if run energy drops low — with your energy or stamina potion boxed. Finished the Barbarian
-  Training farming step? Turn on **I plant barehanded** and a missing dibber is not flagged.
-
-- **Minimal view**
-
-  One switch strips everything back to the warnings that matter and the current plot alone — no fading
-  trail and no inventory boxes.
+  A red warning appears if you forgot your spade, seed dibber, or watering can, or if your run energy gets low. Learned to plant barehanded from Barbarian Training? Turn on **I plant barehanded** and the missing dibber won't be flagged.
 
 - **Stay on the route**
 
-  Two guards keep clicks in order, each moving "Cancel" to the top of the menu (nothing is removed). **Prevent watering out of order** (on by default) guards every plant but the highlighted one while
-  the next action is watering. **Prevent planting wrong plot** (off by default) guards every plot but the
-  route's next one.
+  With **Prevent watering out of order** on, left-clicking any plant except the glowing one does nothing, so a misclick won't send you the wrong way. Right-click still works if you really mean it. **Prevent planting wrong plot** does the same for seeds.
 
-### Never run dry
+- **Minimal view**
 
-- **Water tracking**
+  One switch hides everything except the plot to click now and the warnings that matter.
 
-  Counts regular watering cans and Gricoller's watering can automatically. What the run needs is read from
-  your plots — waters still owed by planted crops plus three for each seed still to go in — so the number
-  stays correct as you water, and it never cries wolf mid-run.
+### Plan your run
 
-- **Refill reminder**
+- **Built-in routes**
 
-  Between runs, every watering can that is not full (a regular can under 8, Gricoller's can under 1,000)
-  and the water barrels glow blue, and the first seed waits until every can is full. If your water will not
-  finish a run already under way, the panel turns red and the cans and barrels glow blue, and a notification
-  fires once so you catch it even while tabbed out. It is on by default and follows RuneLite's usual
-  notification settings (tray, sound, focus, and so on). When the water runs short mid-pass, the next action
-  first spends what you carry on plants waiting for water, then sends you to the barrel.
+  The planting routes from the OSRS Wiki guide are built in. Set how many crops you want to grow, and the plots light up in the right order.
 
-- **Prevent planting (low water)**
+- **Plant your own way**
 
-  Before each seed, the plugin checks the whole rest of the run: your water must cover what your planted crops
-  still need plus three for every seed the run still has room for. If it does not, "Cancel" moves to the top
-  of the menu so a stray click cannot sink a seed you cannot water through to harvest. It only reorders the
-  menu — nothing is ever removed — and you can turn it off.
+  Plant somewhere other than the glowing plot and the plugin adjusts the route to match, then sticks with it through every harvest and replant.
 
-### Save for rewards
+- **Record your own route**
+
+  Prefer your own order? Turn on **Record route**, plant one run the way you like, and the plugin remembers it from then on.
+
+### Track your progress and rewards
+
+- **Tonight's progress**
+
+  The panel shows your Tithe Farm points, the Farming experience you've earned this session, and how long you've been farming. It also shows how much the fruit in your backpack will add once you drop it off. Wearing the Farmer's outfit? Its experience bonus is counted.
 
 - **Reward goals**
 
-  Tick the Farmer Gricoller rewards you are saving for, with a quantity for the repeatable ones like seed packs
-  or herb boxes. A goal box at the farm and in the lobby shows the combined cost, your progress, a points bar,
-  and roughly how many runs are left at your crop count, counting the fruit in your backpack as if deposited.
-  It reads "deposit" when depositing that fruit is all you still need, and "ready!" once your points cover the
-  goal. It warns if the total is more than the 16,000 points you can hold.
+  Tick the Tithe Farm rewards you're saving for, like the Farmer's outfit, seed packs, or herb boxes. A goal box shows your progress, a points bar, and about how many runs you have left. It says "ready!" once you have enough points.
+
+  <img src="docs/img/05-reward-goals.png" alt="The reward goal box showing progress, a points bar, and runs left" width="192">
 
 - **Goal notification**
 
-  An optional notification fires once, the moment your points cover everything you ticked.
+  Get a notification the moment you have enough points for everything you ticked.
 
 ## Links
 
