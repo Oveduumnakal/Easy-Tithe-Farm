@@ -65,7 +65,7 @@ class TitheWaterOverlay extends OverlayPanel
 			return null;
 
 		RunSnapshot snapshot = run.snapshot();
-		boolean warn = config.waterRefillWarning() && snapshot.isShort();
+		boolean warn = config.waterRefillWarning() && snapshot.isLow();
 		Color waterColor = warn ? config.warningColor() : Color.WHITE;
 		panelComponent.getChildren().add(TitleComponent.builder()
 			.text("Tithe Farm")

@@ -198,8 +198,8 @@ public interface TitheFarmConfig extends Config
 	@ConfigItem(
 		keyName = "waterRefillWarning",
 		name = "Refill reminder",
-		description = "Warn when the water you carry will not finish the run. Between runs, light up every can "
-			+ "that is not full and the water barrels, and hold off planting until the cans are full.",
+		description = "Turn the panel red when your plants need more water than you carry. Between runs, light up "
+			+ "every can that is not full and the water barrels, and hold off planting until the cans are full.",
 		section = waterSection,
 		position = 0
 	)
@@ -211,7 +211,7 @@ public interface TitheFarmConfig extends Config
 	@ConfigItem(
 		keyName = "notifyWhenLow",
 		name = "Notify when low",
-		description = "Fires once when your water drops below what the run still needs.",
+		description = "Fires once when your plants need more water than you carry.",
 		section = waterSection,
 		position = 1
 	)

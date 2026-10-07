@@ -122,10 +122,14 @@ final class RunSnapshot
 		return runNeed;
 	}
 
-	/** Whether the water carried falls short of what the run needs. */
-	boolean isShort()
+	/**
+	 * Whether the plants already in the ground need more water than is carried, so one would die without a
+	 * refill. Seeds still to plant are left out: they cannot die, and the plant guard and the refill advice
+	 * cover them. So emptying plots at harvest, or standing between runs with cans to fill, is never low.
+	 */
+	boolean isLow()
 	{
-		return water < runNeed;
+		return water < WaterTracker.plantedNeed(plots);
 	}
 
 	/** Whether a seed can be planted with water enough for the whole run. */
