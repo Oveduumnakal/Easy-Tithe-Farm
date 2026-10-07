@@ -49,7 +49,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
   A countdown sits over every plant waiting for water and turns yellow, then red, as time runs out. Turn on **Notify before a plant dies** to get a heads-up if you get pulled away mid-run.
 
-  <img src="docs/img/04-timers.png" alt="The run panel next to plants with countdown timers above them" width="560">
+  <img src="docs/img/04-timers.png" alt="A countdown timer over a plant waiting for water, its plot glowing blue" width="290">
 
 - **Tool check**
 
