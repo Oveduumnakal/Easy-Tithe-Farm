@@ -153,6 +153,40 @@ public class TitheMenuSwapperOrderTest
 	}
 
 	@Test
+	public void wateringTheTargetIsAllowedWithAnotherPlantUnderTheCursor()
+	{
+		route(new ActionAdvisor.Advice(NextAction.WATER_PLANT, 0), FRESH_C, FRESH_C);
+		MenuEntry other = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, FRESH_C, 3);
+		MenuEntry target = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, FRESH_C, 0);
+		when(menu.getMenuEntries()).thenReturn(new MenuEntry[]{cancel, other, target});
+		swapper.onPostMenuSort();
+		verify(menu, never()).setMenuEntries(any());
+	}
+
+	@Test
+	public void wateringAnotherPlantOnTopPromotesCancelWithTheTargetBelow()
+	{
+		route(new ActionAdvisor.Advice(NextAction.WATER_PLANT, 0), FRESH_C, FRESH_C);
+		MenuEntry target = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, FRESH_C, 0);
+		MenuEntry other = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, FRESH_C, 3);
+		when(menu.getMenuEntries()).thenReturn(new MenuEntry[]{cancel, target, other});
+		swapper.onPostMenuSort();
+		verify(menu).setMenuEntries(new MenuEntry[]{target, other, cancel});
+	}
+
+	@Test
+	public void plantingTheNextPlotIsAllowedWithAnotherEmptyPlotUnderTheCursor()
+	{
+		when(config.blockWrongPlant()).thenReturn(true);
+		route(new ActionAdvisor.Advice(NextAction.PLANT_SEED, 1), STAGE1_WET_C, EMPTY, EMPTY);
+		MenuEntry other = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, EMPTY, 6);
+		MenuEntry next = entry(MenuAction.WIDGET_TARGET_ON_GAME_OBJECT, EMPTY, 3);
+		when(menu.getMenuEntries()).thenReturn(new MenuEntry[]{cancel, other, next});
+		swapper.onPostMenuSort();
+		verify(menu, never()).setMenuEntries(any());
+	}
+
+	@Test
 	public void wateringIsNotGuardedWhenTheNextActionIsNotWatering()
 	{
 		route(new ActionAdvisor.Advice(NextAction.PLANT_SEED, 2), FRESH_C, FRESH_C, EMPTY);

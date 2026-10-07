@@ -406,7 +406,8 @@ public interface TitheFarmConfig extends Config
 	@ConfigItem(
 		keyName = "showSession",
 		name = "Show tonight's progress",
-		description = "Show points earned, experience gained, and time spent this session in the panel.",
+		description = "Show your Tithe Farm points, plus the experience gained and time spent this session, in "
+			+ "the panel.",
 		section = runSection,
 		position = 1
 	)

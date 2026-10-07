@@ -44,9 +44,10 @@ import net.runelite.api.Point;
  * <li>Wrong plot: a plant action on any plot but the route's next one, so seeds go in route order.</li>
  * <li>Out-of-order water: while the next action is watering, a click on any other unwatered plant.</li>
  * </ul>
- * It only ever reorders — no entry is removed — mirroring the Cancel-to-top guard in the Goat Pit Indicators
- * plugin. Runs every frame on {@code PostMenuSort} so it fixes both the left-click default and the right-click
- * ordering.
+ * Only the left-click entry is judged: the cursor often sits over several plants at once, and an off-target plant
+ * further down the menu must not cancel a click on the right one. It only ever reorders — no entry is removed —
+ * mirroring the Cancel-to-top guard in the Goat Pit Indicators plugin. Runs every frame on {@code PostMenuSort},
+ * so the swap holds for both the left-click default and the right-click menu.
  */
 @Singleton
 class TitheMenuSwapper
@@ -65,7 +66,7 @@ class TitheMenuSwapper
 		this.run = run;
 	}
 
-	/** Applies the Cancel-to-top guard when the menu holds a plant or water click a guard forbids. */
+	/** Applies the Cancel-to-top guard when the left-click entry is a plant or water click a guard forbids. */
 	void onPostMenuSort()
 	{
 		boolean anyGuard = config.blockPlantWhenShort() || config.blockWrongPlant() || config.blockOutOfOrderWater();
@@ -74,7 +75,7 @@ class TitheMenuSwapper
 
 		Menu menu = client.getMenu();
 		MenuEntry[] entries = menu.getMenuEntries();
-		if (entries.length < 2 || !hasBlockedEntry(entries))
+		if (entries.length < 2 || !isBlocked(entries[entries.length - 1]))
 			return;
 
 		MenuEntry cancel = firstOfType(entries, MenuAction.CANCEL);
@@ -82,22 +83,19 @@ class TitheMenuSwapper
 			menu.setMenuEntries(promoteToTop(entries, cancel));
 	}
 
-	/** Whether any entry is a plant or water click that an enabled guard forbids. */
-	private boolean hasBlockedEntry(MenuEntry[] entries)
+	/**
+	 * Whether an entry is a plant or water click that an enabled guard forbids.
+	 *
+	 * @param entry the menu entry, normally the left-click one at the end of the menu
+	 * @return true when the entry should give way to Cancel
+	 */
+	private boolean isBlocked(MenuEntry entry)
 	{
-		for (MenuEntry entry : entries)
-		{
-			if (isPlantEntry(entry.getType(), entry.getIdentifier()))
-			{
-				if (blocksPlant(entry, run.snapshot()))
-					return true;
-			}
-			else if (isWaterEntry(entry.getType(), entry.getIdentifier()))
-			{
-				if (blocksWater(entry, run.snapshot()))
-					return true;
-			}
-		}
+		if (isPlantEntry(entry.getType(), entry.getIdentifier()))
+			return blocksPlant(entry, run.snapshot());
+
+		if (isWaterEntry(entry.getType(), entry.getIdentifier()))
+			return blocksWater(entry, run.snapshot());
 
 		return false;
 	}
