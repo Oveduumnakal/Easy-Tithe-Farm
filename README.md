@@ -35,7 +35,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
 - **Refill reminder**
 
-  Between runs, any watering can that isn't full glows blue along with the water barrels, and the plugin waits for you to fill up before the first seed goes in. If you start running low partway through a run, the panel turns red, the barrels light up, and you get a notification, even if you're tabbed out.
+  Between runs, any watering can that isn't full glows blue along with the water barrels, and the plugin waits for you to fill up before the first seed goes in. If your plants ever need more water than you carry, the panel turns red and you get a notification, even if you're tabbed out.
 
   <img src="docs/img/03-refill.png" alt="Watering cans in the backpack and the water barrels glowing blue between runs" width="560">
 
@@ -81,7 +81,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
 - **Tonight's progress**
 
-  The panel shows the points and Farming experience you've earned this session, and how long you've been farming. It also shows how much the fruit in your backpack will add once you drop it off. Wearing the Farmer's outfit? Its experience bonus is counted.
+  The panel shows your Tithe Farm points, the Farming experience you've earned this session, and how long you've been farming. It also shows how much the fruit in your backpack will add once you drop it off. Wearing the Farmer's outfit? Its experience bonus is counted.
 
 - **Reward goals**
 
