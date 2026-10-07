@@ -21,7 +21,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
   Each glowing plot shows its place in line: 1 for the plot to click now, then 2 to 5 for the ones after it. Pick **Numbers**, **Blips** (that many small dots), or **Off** in the settings.
 
-  <img src="docs/img/01-highlights.png" alt="Five glowing plots in green, blue, and yellow, numbered 1 to 5" width="270"> <img src="docs/img/02-blips.png" alt="The same glowing plots marked with one to five small dots instead of numbers" width="270">
+  <img src="docs/img/01-highlights.png" alt="Glowing plots numbered 1 to 5: blue to water now, then green to plant next" width="270"> <img src="docs/img/02-blips.png" alt="Glowing plots marked with one to five small dots instead of numbers" width="270">
 
 - **Glow**
 
@@ -37,7 +37,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
   Between runs, any watering can that isn't full glows blue along with the water barrels, and the plugin waits for you to fill up before the first seed goes in. If your plants ever need more water than you carry, the panel turns red and you get a notification, even if you're tabbed out.
 
-  <img src="docs/img/03-refill.png" alt="Watering cans in the backpack and the water barrels glowing blue between runs" width="560">
+  <img src="docs/img/03-refill.png" alt="Watering cans in the backpack and the water barrels glowing blue between runs" width="262">
 
 - **No wasted seeds**
 
@@ -87,7 +87,7 @@ Easy Tithe Farm is a RuneLite plugin that turns the Tithe Farm minigame into a f
 
   Tick the Tithe Farm rewards you're saving for, like the Farmer's outfit, seed packs, or herb boxes. A goal box shows your progress, a points bar, and about how many runs you have left. It says "ready!" once you have enough points.
 
-  <img src="docs/img/05-reward-goals.png" alt="The reward goal box showing progress, a points bar, and runs left" width="300">
+  <img src="docs/img/05-reward-goals.png" alt="The reward goal box showing progress, a points bar, and runs left" width="192">
 
 - **Goal notification**
 
