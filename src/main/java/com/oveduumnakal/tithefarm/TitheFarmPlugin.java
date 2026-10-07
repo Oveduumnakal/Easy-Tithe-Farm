@@ -242,8 +242,8 @@ public class TitheFarmPlugin extends Plugin
 	 * Restores tracking after a start-up, on the client thread. Forgets the adapted route and the death warnings
 	 * from before the plugin was turned off, notes the logged-in account, and, when logged in, feeds every object
 	 * in the loaded scene through the tracker the way {@link #onGameObjectSpawned} does. The scan sees no plot
-	 * change, so it never re-plans or records; the layout dump asked for in {@link #startUp()} is written on the
-	 * next tick in the farm. An object larger than a tile sits on several tiles; tracking it again is a no-op.
+	 * change, so it never re-plans or records. An object larger than a tile sits on several tiles; tracking it
+	 * again is a no-op.
 	 */
 	private void restoreScene()
 	{
@@ -287,9 +287,9 @@ public class TitheFarmPlugin extends Plugin
 	}
 
 	/**
-	 * Clears tracked objects when the scene is torn down, and asks for a fresh layout dump once a new scene is
-	 * in. Despawn events do not always fire on a world hop, so without this the plugin would keep drawing plots
-	 * that are no longer loaded.
+	 * Clears tracked objects when the scene is torn down, and checks for a new account once logged in. Despawn
+	 * events do not always fire on a world hop, so without this the plugin would keep drawing plots that are no
+	 * longer loaded.
 	 */
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
