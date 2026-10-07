@@ -24,11 +24,15 @@
  */
 package com.oveduumnakal.tithefarm;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import net.runelite.api.GameObject;
 import net.runelite.client.Notifier;
 import net.runelite.client.config.Notification;
 
@@ -42,9 +46,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Verifies the low-water notification fires once per shortfall, through the configured notification. */
+/**
+ * Verifies the low-water notification fires once per shortfall of the plants in the ground, through the configured
+ * notification, and stays quiet at harvest and between runs.
+ */
 public class WaterReminderTest
 {
+	/** A seed planted moments ago: unwatered at stage 1, owed three waters. */
+	private static final int FRESH_SEED = TitheFarmIds.PLOT_GROWTH_FIRST;
+
 	private TitheFarmConfig config;
 	private TitheRun run;
 	private Notifier notifier;
@@ -61,25 +71,40 @@ public class WaterReminderTest
 		reminder = new WaterReminder(config, tracker, run, notifier);
 	}
 
-	private void water(int carried, int needed)
+	/** Sets the run to the given water carried over plots of the given ids, the whole run needing 60. */
+	private void water(int carried, int... plotIds)
 	{
-		RunSnapshot snapshot = new RunSnapshot(TestRuns.listOf(TestRuns.plot(27383, 1L)), 1,
-			TestRuns.listOf(PlotInfo.of(27383, 0)), carried, needed, true,
-			new ActionAdvisor.Advice(NextAction.WAIT, -1), false, 0, RunStatus.NEUTRAL,
-			Collections.emptyList());
+		List<GameObject> route = new ArrayList<>();
+		List<PlotInfo> plots = new ArrayList<>();
+		for (int i = 0; i < plotIds.length; i++)
+		{
+			route.add(TestRuns.plot(plotIds[i], i + 1L));
+			plots.add(PlotInfo.of(plotIds[i], 0));
+		}
+
+		RunSnapshot snapshot = new RunSnapshot(route, route.size(), plots, carried, 60, true,
+			new ActionAdvisor.Advice(NextAction.WAIT, -1), false, 0, RunStatus.NEUTRAL, Collections.emptyList());
 		when(run.snapshot()).thenReturn(snapshot);
+	}
+
+	/** Sets the run to the given water carried over a number of fresh seeds, each owed three waters. */
+	private void seeds(int carried, int count)
+	{
+		int[] ids = new int[count];
+		Arrays.fill(ids, FRESH_SEED);
+		water(carried, ids);
 	}
 
 	@Test
 	public void notifiesOncePerShortfall()
 	{
-		water(10, 60);
+		seeds(10, 4);
 		reminder.onTick();
 		reminder.onTick();
 		verify(notifier, times(1)).notify(any(Notification.class), anyString());
-		water(64, 60);
+		seeds(12, 4);
 		reminder.onTick();
-		water(10, 60);
+		seeds(10, 4);
 		reminder.onTick();
 		verify(notifier, times(2)).notify(any(Notification.class), anyString());
 	}
@@ -87,7 +112,24 @@ public class WaterReminderTest
 	@Test
 	public void quietWhenThereIsEnough()
 	{
-		water(64, 60);
+		seeds(64, 20);
+		reminder.onTick();
+		verify(notifier, never()).notify(any(Notification.class), anyString());
+	}
+
+	@Test
+	public void quietWhenHarvestEmptiesPlots()
+	{
+		water(4, TitheFarmIds.PLOT_EMPTY, TitheFarmIds.PLOT_EMPTY, TitheFarmIds.PLOT_A_GROWN,
+			TitheFarmIds.PLOT_A_GROWN);
+		reminder.onTick();
+		verify(notifier, never()).notify(any(Notification.class), anyString());
+	}
+
+	@Test
+	public void quietBetweenRuns()
+	{
+		water(0, TitheFarmIds.PLOT_EMPTY, TitheFarmIds.PLOT_EMPTY);
 		reminder.onTick();
 		verify(notifier, never()).notify(any(Notification.class), anyString());
 	}
@@ -102,7 +144,7 @@ public class WaterReminderTest
 	public void usesTheConfiguredNotification()
 	{
 		when(config.notifyWhenLow()).thenReturn(Notification.OFF);
-		water(10, 60);
+		seeds(2, 1);
 		reminder.onTick();
 		verify(notifier).notify(same(Notification.OFF), anyString());
 	}
